@@ -498,17 +498,28 @@
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 10px; margin-bottom: 22px;
   }
-  .demo { padding: 10px 8px; border: 1px solid var(--line); text-align: center; background: var(--bg-card); }
+  .demo {
+    padding: 13px 8px; border: 1px solid var(--line); text-align: center;
+    background: var(--bg-card);
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  .demo .poi-ico {
+    width: 22px; height: 22px;
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .demo .poi-ico svg { width: 100%; height: 100%; }
   .demo .num {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 20px; font-weight: 500;
+    font-size: 22px; font-weight: 600;
     color: var(--ink); line-height: 1;
   }
+  .demo .num.counting { opacity: 0.4; font-size: 15px; }
   .demo .lbl {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 9px; color: var(--ink-3);
-    letter-spacing: 0.1em; text-transform: uppercase;
-    margin-top: 6px;
+    font-size: 8.5px; color: var(--ink-3);
+    letter-spacing: 0.05em; text-transform: uppercase;
+    line-height: 1.3;
   }
 
   .highlights {
@@ -1828,6 +1839,25 @@
 
 
 
+
+  .demo .num.counting {
+    opacity: 0.45;
+    font-size: 0.7em;
+    animation: countPulse 1s ease-in-out infinite;
+  }
+  @keyframes countPulse { 0%,100%{opacity:.3} 50%{opacity:.7} }
+
+
+  .poi-hint {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11.5px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .poi-hint-icon { font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -2070,22 +2100,29 @@ function render(id){
       <span>♀ FEMALE · <strong>${fmt(d.female)}</strong> (${femalePct}%)</span>
     </div>
 
+    <div class="poi-hint">
+      <span class="poi-hint-icon">☞</span> กดเพื่อดูรายชื่อสถานที่ · Tap to view places
+    </div>
     <div class="demo-row">
       <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','temple','${d.name_en}')">
-        <div class="num">${d.no_temple||0}</div><div class="lbl">Temples</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.temple}</span>
+        <div class="num" id="cnt-temple" data-static="${d.no_temple||0}">${d.no_temple||0}</div>
+        <div class="lbl">วัด · Temples</div>
       </div>
       <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','school','${d.name_en}')">
-        <div class="num">${d.no_sch||0}</div><div class="lbl">Schools</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.school}</span>
+        <div class="num" id="cnt-school" data-static="${d.no_sch||0}">${d.no_sch||0}</div>
+        <div class="lbl">โรงเรียน · Schools</div>
       </div>
       <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','hospital','${d.name_en}')">
-        <div class="num">${(d.no_hos||0)+(d.no_health||0)}</div><div class="lbl">Health</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.hospital}</span>
+        <div class="num" id="cnt-hospital" data-static="${(d.no_hos||0)+(d.no_health||0)}">${(d.no_hos||0)+(d.no_health||0)}</div>
+        <div class="lbl">สาธารณสุข · Health</div>
       </div>
       <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','community','${d.name_en}')">
-        <div class="num">${d.no_commu||0}</div><div class="lbl">Communities</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.community}</span>
+        <div class="num" id="cnt-community" data-static="${d.no_commu||0}">${d.no_commu||0}</div>
+        <div class="lbl">ชุมชน · Communities</div>
       </div>
     </div>
 
@@ -2112,6 +2149,8 @@ function render(id){
         b.style.setProperty('--w', w)));
     });
   }, 30);
+
+  if (typeof refreshLiveCounts === 'function') refreshLiveCounts(d.dcode);
 }
 
 function getZoneName(z) {
@@ -3348,20 +3387,30 @@ function renderSub(sub) {
     <div class="pop-headline">${fmt(sub.pop_est)} <em>est.</em></div>
     <div class="pop-sub">PRO-RATA ESTIMATE · BMA CENSUS 2563</div>
 
+    <div class="poi-hint">
+      <span class="poi-hint-icon">☞</span> กดเพื่อดูรายชื่อสถานที่ · Tap to view places
+    </div>
     <div class="demo-row">
       <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','temple','${district.name_en} · ${sub.sname_en}')">
-        <div class="num">${subTemples}</div><div class="lbl">Temples</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.temple}</span>
+        <div class="num" id="cnt-temple" data-static="${subTemples}">${subTemples}</div>
+        <div class="lbl">วัด · Temples</div>
       </div>
       <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','school','${district.name_en} · ${sub.sname_en}')">
-        <div class="num">${subSch}</div><div class="lbl">Schools</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.school}</span>
+        <div class="num" id="cnt-school" data-static="${subSch}">${subSch}</div>
+        <div class="lbl">โรงเรียน · Schools</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','hospital','${district.name_en} · ${sub.sname_en}')">
+        <span class="poi-ico">${POI_ICONS.hospital}</span>
+        <div class="num" id="cnt-hospital" data-static="0">0</div>
+        <div class="lbl">สาธารณสุข · Health</div>
       </div>
       <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','community','${district.name_en} · ${sub.sname_en}')">
-        <div class="num">${subCommu}</div><div class="lbl">Communities</div>
-        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+        <span class="poi-ico">${POI_ICONS.community}</span>
+        <div class="num" id="cnt-community" data-static="${subCommu}">${subCommu}</div>
+        <div class="lbl">ชุมชน · Communities</div>
       </div>
-      <div class="demo"><div class="num">${sub.water || 0}</div><div class="lbl">Water Bodies</div></div>
     </div>
 
     ${buildPermissionsBar(district.primary_zone)}
@@ -3391,6 +3440,8 @@ function renderSub(sub) {
         b.style.setProperty('--w', w)));
     });
   }, 30);
+
+  if (typeof refreshLiveCounts === 'function') refreshLiveCounts(district.dcode);
 }
 
 // Deterministic but slightly varied land mix per subdistrict
@@ -3425,38 +3476,59 @@ const OVERPASS_ENDPOINTS = [
 ];
 
 // นิยาม query แต่ละประเภท (OSM tags)
+// ไอคอน SVG สำหรับกล่อง POI
+const POI_ICONS = {
+  temple: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 7h16L12 2z"/><path d="M5 7v4M9 7v4M15 7v4M19 7v4"/><path d="M4 11h16v3H4z"/><path d="M6 14v6M18 14v6M4 20h16"/></svg>',
+  school: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 2.5 6 2.5s6-1 6-2.5v-5"/></svg>',
+  hospital: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 8v8M8 12h8"/></svg>',
+  community: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V11l7-5 7 5v10"/><path d="M9 21v-5h6v5"/></svg>'
+};
+
 const POI_QUERIES = {
   temple: {
     label_en: 'Temples',
     label_th: 'วัด / ศาสนสถาน',
     icon: 'M12 3l6 5v3h-2v10H8V11H6V8l6-5M10 21V14h4v7',
-    // วัดพุทธ + ศาสนสถานอื่น
-    filter: '["amenity"="place_of_worship"]'
+    filter: '["amenity"="place_of_worship"]',
+    // ตรวจสอบประเภท: ต้องเป็น place_of_worship เท่านั้น
+    validate: t => t.amenity === 'place_of_worship'
   },
   school: {
     label_en: 'Schools',
     label_th: 'โรงเรียน / สถานศึกษา',
     icon: 'M2 10l10-5 10 5l-10 5L2 10M6 12v5c0 2 3 3 6 3s6-1 6-3v-5',
-    filter: '["amenity"~"school|college|university|kindergarten"]'
+    filter: '["amenity"~"^(school|college|university|kindergarten)$"]',
+    validate: t => ['school','college','university','kindergarten'].includes(t.amenity)
   },
   hospital: {
     label_en: 'Health',
     label_th: 'โรงพยาบาล / สถานพยาบาล',
     icon: 'M4 21V5h16v16M12 9v8M8 13h8',
-    filter: '["amenity"~"hospital|clinic|doctors"]'
+    filter: '["amenity"~"^(hospital|clinic|doctors)$"]',
+    validate: t => ['hospital','clinic','doctors'].includes(t.amenity)
   },
   community: {
     label_en: 'Communities',
     label_th: 'ชุมชน / สถานที่ชุมชน',
     icon: 'M3 21h18M5 21V10l7-5l7 5v11M9 13v5M12 13v5M15 13v5',
-    filter: '["place"~"neighbourhood|suburb|quarter"]'
+    filter: '["place"~"^(neighbourhood|suburb|quarter|village)$"]',
+    validate: t => ['neighbourhood','suburb','quarter','village'].includes(t.place)
   }
 };
 
 // สร้าง Overpass QL query จาก bbox
 function buildOverpassQuery(bbox, filter) {
+  // (สำรอง) query แบบ bounding box
   const bb = `${bbox.s},${bbox.w},${bbox.n},${bbox.e}`;
-  return `[out:json][timeout:25];(node${filter}(${bb});way${filter}(${bb}););out tags center 60;`;
+  return `[out:json][timeout:25];(node${filter}(${bb});way${filter}(${bb}););out tags center 80;`;
+}
+
+// query แบบ "area" — นับเฉพาะในขอบเขตเขตจริง (แม่นกว่า bbox มาก)
+function buildAreaQuery(districtNameTh, filter) {
+  // ค้นหาขอบเขตการปกครองของเขต (admin_level 8 = อำเภอ/เขต ในไทย) แล้วดึง POI เฉพาะในนั้น
+  return `[out:json][timeout:30];` +
+    `area["boundary"="administrative"]["admin_level"="8"]["name"="เขต${districtNameTh}"]->.d;` +
+    `(node${filter}(area.d);way${filter}(area.d););out tags center 100;`;
 }
 
 // ดึง POI จาก Overpass (ลอง endpoint หลายตัว)
@@ -3464,13 +3536,34 @@ async function fetchPOI(dcode, type) {
   const cacheKey = `${dcode}-${type}`;
   if (POI_CACHE[cacheKey]) return POI_CACHE[cacheKey];
 
+  // เช็ค localStorage (เก็บข้ามรอบ) — หมดอายุ 30 วัน
+  try {
+    const stored = localStorage.getItem('poi_' + cacheKey);
+    if (stored) {
+      const obj = JSON.parse(stored);
+      if (obj.ts && (Date.now() - obj.ts) < 30*24*60*60*1000) {
+        POI_CACHE[cacheKey] = obj.items;
+        return obj.items;
+      }
+    }
+  } catch(e) {}
+
   const bbox = DISTRICT_BBOX[dcode];
   if (!bbox) throw new Error('ไม่พบขอบเขตเขต');
 
-  const query = buildOverpassQuery(bbox, POI_QUERIES[type].filter);
+  // หาชื่อเขตภาษาไทยจาก dcode เพื่อใช้ area query (แม่นกว่า)
+  const distObj = DATA.districts.find(x => x.dcode === dcode);
+  const nameTh = distObj ? distObj.name_th : null;
+  const filter = POI_QUERIES[type].filter;
+
+  // ลอง area query ก่อน (นับเฉพาะในเขตจริง) แล้ว fallback เป็น bbox
+  const queries = [];
+  if (nameTh) queries.push(buildAreaQuery(nameTh, filter));
+  queries.push(buildOverpassQuery(bbox, filter));
 
   let lastErr;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
+  for (const query of queries) {
+    for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -3480,8 +3573,10 @@ async function fetchPOI(dcode, type) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
 
-      // แปลงผลลัพธ์เป็นรายชื่อ
+      // แปลงผลลัพธ์เป็นรายชื่อ (กรองให้ตรงประเภทจริงก่อน)
+      const validateFn = POI_QUERIES[type].validate;
       const items = (data.elements || [])
+        .filter(el => !validateFn || validateFn(el.tags || {}))
         .map(el => {
           const t = el.tags || {};
           const name_th = t['name:th'] || t.name || '';
@@ -3501,14 +3596,47 @@ async function fetchPOI(dcode, type) {
         .filter((v, i, arr) => arr.findIndex(x => x.th === v.th && x.en === v.en) === i)
         .sort((a, b) => (a.th || a.en).localeCompare(b.th || b.en, 'th'));
 
+      // ถ้า area query แรกได้ 0 รายการ (อาจหา boundary ไม่เจอ) ให้ลอง query ถัดไป (bbox)
+      const isAreaQuery = query.includes('boundary');
+      if (items.length === 0 && isAreaQuery && queries.length > 1) {
+        lastErr = new Error('area ว่าง');
+        break; // ออกจาก loop endpoint ไปลอง query ถัดไป (bbox)
+      }
+
       POI_CACHE[cacheKey] = items;
+      try { localStorage.setItem('poi_' + cacheKey, JSON.stringify({ ts: Date.now(), items })); } catch(e) {}
       return items;
     } catch (e) {
       lastErr = e;
       continue; // ลอง endpoint ถัดไป
     }
-  }
+    }  // ปิด loop endpoint
+  }  // ปิด loop queries
   throw lastErr || new Error('ดึงข้อมูลไม่สำเร็จ');
+}
+
+// อัปเดตตัวเลขในกล่องให้ตรงกับ OpenStreetMap (ดึงสด + cache)
+let _cntToken = 0;
+async function refreshLiveCounts(dcode) {
+  const myToken = ++_cntToken;
+  const map = { temple:'cnt-temple', school:'cnt-school', hospital:'cnt-hospital', community:'cnt-community' };
+  // แสดงสถานะกำลังนับ
+  Object.values(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '··'; el.classList.add('counting'); el.title = 'กำลังนับจาก OpenStreetMap'; }
+  });
+  for (const [type, id] of Object.entries(map)) {
+    try {
+      const items = await fetchPOI(dcode, type);
+      if (myToken !== _cntToken) return;  // เปลี่ยนเขตแล้ว
+      const el = document.getElementById(id);
+      if (el) { el.textContent = items.length; el.classList.remove('counting'); el.title = 'ข้อมูลจาก OpenStreetMap'; }
+    } catch (e) {
+      if (myToken !== _cntToken) return;
+      const el = document.getElementById(id);
+      if (el) { el.textContent = el.dataset.static || '0'; el.classList.remove('counting'); el.title = 'ข้อมูลโดยประมาณ (เชื่อม OSM ไม่ได้)'; }
+    }
+  }
 }
 
 // เปิด modal แสดงรายชื่อ
