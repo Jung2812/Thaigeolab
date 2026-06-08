@@ -1858,6 +1858,42 @@
   }
   .poi-hint-icon { font-size: 13px; }
 
+
+  /* === COLLAPSIBLE SECTIONS === */
+  .section-title.collapsible,
+  .law-subhead.collapsible {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .section-title.collapsible:hover { color: var(--accent-2); }
+  .law-subhead.collapsible:hover { color: var(--accent); }
+  .collapse-chevron {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ink-3);
+    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+    flex-shrink: 0;
+  }
+  .section-title.collapsible { justify-content: flex-start; }
+  .section-title.collapsible .collapse-chevron { margin-left: auto; }
+  .collapsed > .collapse-chevron { transform: rotate(-90deg); }
+
+  .collapse-body {
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease, margin 0.3s ease;
+    max-height: 4000px;
+    opacity: 1;
+  }
+  .collapse-body.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    pointer-events: none;
+  }
+
 </style>
 </head>
 <body>
@@ -2151,6 +2187,7 @@ function render(id){
   }, 30);
 
   if (typeof refreshLiveCounts === 'function') refreshLiveCounts(d.dcode);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
 }
 
 function getZoneName(z) {
@@ -3321,6 +3358,7 @@ function renderDistrictWithSubs(d) {
   });
 
   document.getElementById('crumb-home').addEventListener('click', drillOut);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
 }
 
 function renderSub(sub) {
@@ -3442,6 +3480,7 @@ function renderSub(sub) {
   }, 30);
 
   if (typeof refreshLiveCounts === 'function') refreshLiveCounts(district.dcode, sub.sname_th);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
 }
 
 // Deterministic but slightly varied land mix per subdistrict
@@ -3649,6 +3688,57 @@ async function refreshLiveCounts(dcode, subNameTh) {
       if (el) { el.textContent = el.dataset.static || '0'; el.classList.remove('counting'); el.title = 'ข้อมูลโดยประมาณ (เชื่อม OSM ไม่ได้)'; }
     }
   }
+}
+
+
+// === ทำหัวข้อให้พับ/ขยายได้ (collapsible) ===
+function makeCollapsible(panel) {
+  if (!panel) return;
+  // หัวข้อที่จะทำให้พับได้ (section-title ทุกอันยกเว้น i. แรก + law-subhead ทุกอัน)
+  const headings = Array.from(panel.querySelectorAll('.section-title, .law-subhead'));
+
+  // หัวข้อที่ให้แสดงเริ่มต้น (ไม่พับ) — ข้อมูลหลักที่ควรเห็นทันที
+  const keepOpen = ['kind of land', 'land type', 'ประเภทการใช้ที่ดิน', 'ประเภทที่ดิน'];
+
+  headings.forEach((head) => {
+    // ข้ามถ้าทำไปแล้ว
+    if (head.dataset.collapsibleDone) return;
+    head.dataset.collapsibleDone = '1';
+
+    const headText = head.textContent.toLowerCase();
+    const shouldKeepOpen = keepOpen.some(k => headText.includes(k));
+
+    // รวบรวม element ที่ตามมาจนถึง heading ถัดไป (section-title หรือ law-subhead)
+    const body = document.createElement('div');
+    body.className = 'collapse-body';
+    let sib = head.nextElementSibling;
+    const toMove = [];
+    while (sib && !sib.classList.contains('section-title') && !sib.classList.contains('law-subhead')) {
+      toMove.push(sib);
+      sib = sib.nextElementSibling;
+    }
+    if (toMove.length === 0) return; // ไม่มีเนื้อหาให้พับ
+    toMove.forEach(el => body.appendChild(el));
+    head.parentNode.insertBefore(body, sib);
+
+    // เพิ่มลูกศร + คลาส
+    head.classList.add('collapsible');
+    const chev = document.createElement('span');
+    chev.className = 'collapse-chevron';
+    chev.textContent = '▼';
+    head.appendChild(chev);
+    // หัวข้อหลักเปิดไว้ ส่วนที่เหลือพับ
+    if (!shouldKeepOpen) {
+      head.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+
+    // คลิกสลับ
+    head.addEventListener('click', () => {
+      const isCollapsed = body.classList.toggle('collapsed');
+      head.classList.toggle('collapsed', isCollapsed);
+    });
+  });
 }
 
 // เปิด modal แสดงรายชื่อ
