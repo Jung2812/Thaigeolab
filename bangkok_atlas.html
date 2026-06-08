@@ -3391,22 +3391,22 @@ function renderSub(sub) {
       <span class="poi-hint-icon">☞</span> กดเพื่อดูรายชื่อสถานที่ · Tap to view places
     </div>
     <div class="demo-row">
-      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','temple','${district.name_en} · ${sub.sname_en}')">
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','temple','${district.name_en} · ${sub.sname_en}','${sub.sname_th}')">
         <span class="poi-ico">${POI_ICONS.temple}</span>
         <div class="num" id="cnt-temple" data-static="${subTemples}">${subTemples}</div>
         <div class="lbl">วัด · Temples</div>
       </div>
-      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','school','${district.name_en} · ${sub.sname_en}')">
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','school','${district.name_en} · ${sub.sname_en}','${sub.sname_th}')">
         <span class="poi-ico">${POI_ICONS.school}</span>
         <div class="num" id="cnt-school" data-static="${subSch}">${subSch}</div>
         <div class="lbl">โรงเรียน · Schools</div>
       </div>
-      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','hospital','${district.name_en} · ${sub.sname_en}')">
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','hospital','${district.name_en} · ${sub.sname_en}','${sub.sname_th}')">
         <span class="poi-ico">${POI_ICONS.hospital}</span>
         <div class="num" id="cnt-hospital" data-static="0">0</div>
         <div class="lbl">สาธารณสุข · Health</div>
       </div>
-      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','community','${district.name_en} · ${sub.sname_en}')">
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','community','${district.name_en} · ${sub.sname_en}','${sub.sname_th}')">
         <span class="poi-ico">${POI_ICONS.community}</span>
         <div class="num" id="cnt-community" data-static="${subCommu}">${subCommu}</div>
         <div class="lbl">ชุมชน · Communities</div>
@@ -3441,7 +3441,7 @@ function renderSub(sub) {
     });
   }, 30);
 
-  if (typeof refreshLiveCounts === 'function') refreshLiveCounts(district.dcode);
+  if (typeof refreshLiveCounts === 'function') refreshLiveCounts(district.dcode, sub.sname_th);
 }
 
 // Deterministic but slightly varied land mix per subdistrict
@@ -3531,9 +3531,19 @@ function buildAreaQuery(districtNameTh, filter) {
     `(node${filter}(area.d);way${filter}(area.d););out tags center 100;`;
 }
 
+// query ตามขอบเขตแขวง (admin_level 9 = แขวง/ตำบล ในไทย) — กรองเฉพาะในแขวงนั้น
+function buildSubAreaQuery(subNameTh, districtNameTh, filter) {
+  // ใช้ชื่อแขวง + จำกัดในเขตแม่ เพื่อไม่ให้สับสนกับแขวงชื่อซ้ำต่างเขต
+  return `[out:json][timeout:30];` +
+    `area["boundary"="administrative"]["admin_level"="8"]["name"="เขต${districtNameTh}"]->.dist;` +
+    `area["boundary"="administrative"]["admin_level"="9"]["name"="แขวง${subNameTh}"](area.dist)->.sub;` +
+    `(node${filter}(area.sub);way${filter}(area.sub););out tags center 100;`;
+}
+
 // ดึง POI จาก Overpass (ลอง endpoint หลายตัว)
-async function fetchPOI(dcode, type) {
-  const cacheKey = `${dcode}-${type}`;
+async function fetchPOI(dcode, type, subNameTh) {
+  // cache key แยกตามแขวง (ถ้ามี)
+  const cacheKey = subNameTh ? `${dcode}-${type}-${subNameTh}` : `${dcode}-${type}`;
   if (POI_CACHE[cacheKey]) return POI_CACHE[cacheKey];
 
   // เช็ค localStorage (เก็บข้ามรอบ) — หมดอายุ 30 วัน
@@ -3556,13 +3566,15 @@ async function fetchPOI(dcode, type) {
   const nameTh = distObj ? distObj.name_th : null;
   const filter = POI_QUERIES[type].filter;
 
-  // ลอง area query ก่อน (นับเฉพาะในเขตจริง) แล้ว fallback เป็น bbox
+  // สร้างลำดับ query: ถ้าระบุแขวง → ใช้ขอบเขตแขวงก่อน, แล้ว fallback เป็นเขต, แล้ว bbox
   const queries = [];
+  if (subNameTh && nameTh) queries.push(buildSubAreaQuery(subNameTh, nameTh, filter));
   if (nameTh) queries.push(buildAreaQuery(nameTh, filter));
   queries.push(buildOverpassQuery(bbox, filter));
 
   let lastErr;
-  for (const query of queries) {
+  for (let qIndex = 0; qIndex < queries.length; qIndex++) {
+    const query = queries[qIndex];
     for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const res = await fetch(endpoint, {
@@ -3596,11 +3608,11 @@ async function fetchPOI(dcode, type) {
         .filter((v, i, arr) => arr.findIndex(x => x.th === v.th && x.en === v.en) === i)
         .sort((a, b) => (a.th || a.en).localeCompare(b.th || b.en, 'th'));
 
-      // ถ้า area query แรกได้ 0 รายการ (อาจหา boundary ไม่เจอ) ให้ลอง query ถัดไป (bbox)
-      const isAreaQuery = query.includes('boundary');
-      if (items.length === 0 && isAreaQuery && queries.length > 1) {
-        lastErr = new Error('area ว่าง');
-        break; // ออกจาก loop endpoint ไปลอง query ถัดไป (bbox)
+      // ถ้า query นี้ได้ 0 รายการ และยังมี query สำรองถัดไป (เช่น sub→district→bbox) ให้ลองต่อ
+      const isLastQuery = (qIndex === queries.length - 1);
+      if (items.length === 0 && !isLastQuery) {
+        lastErr = new Error('query ว่าง ลองระดับถัดไป');
+        break; // ออกจาก loop endpoint ไปลอง query ถัดไป
       }
 
       POI_CACHE[cacheKey] = items;
@@ -3617,7 +3629,7 @@ async function fetchPOI(dcode, type) {
 
 // อัปเดตตัวเลขในกล่องให้ตรงกับ OpenStreetMap (ดึงสด + cache)
 let _cntToken = 0;
-async function refreshLiveCounts(dcode) {
+async function refreshLiveCounts(dcode, subNameTh) {
   const myToken = ++_cntToken;
   const map = { temple:'cnt-temple', school:'cnt-school', hospital:'cnt-hospital', community:'cnt-community' };
   // แสดงสถานะกำลังนับ
@@ -3627,7 +3639,7 @@ async function refreshLiveCounts(dcode) {
   });
   for (const [type, id] of Object.entries(map)) {
     try {
-      const items = await fetchPOI(dcode, type);
+      const items = await fetchPOI(dcode, type, subNameTh);
       if (myToken !== _cntToken) return;  // เปลี่ยนเขตแล้ว
       const el = document.getElementById(id);
       if (el) { el.textContent = items.length; el.classList.remove('counting'); el.title = 'ข้อมูลจาก OpenStreetMap'; }
@@ -3640,7 +3652,7 @@ async function refreshLiveCounts(dcode) {
 }
 
 // เปิด modal แสดงรายชื่อ
-async function openPOIModal(dcode, type, districtName) {
+async function openPOIModal(dcode, type, districtName, subNameTh) {
   const cfg = POI_QUERIES[type];
   const modal = document.getElementById('poi-modal');
   const modalBody = document.getElementById('poi-modal-body');
@@ -3659,7 +3671,7 @@ async function openPOIModal(dcode, type, districtName) {
     </div>`;
 
   try {
-    const items = await fetchPOI(dcode, type);
+    const items = await fetchPOI(dcode, type, subNameTh);
     if (items.length === 0) {
       modalBody.innerHTML = `<div class="poi-empty">ไม่พบข้อมูลที่บันทึกไว้ใน OpenStreetMap สำหรับพื้นที่นี้<br><span>(ข้อมูล OSM อาจยังไม่ครบถ้วน)</span></div>`;
       return;
@@ -3686,7 +3698,7 @@ async function openPOIModal(dcode, type, districtName) {
         <div class="poi-error-icon">⚠</div>
         โหลดข้อมูลไม่สำเร็จ<br>
         <span>${e.message || 'การเชื่อมต่อมีปัญหา'} — กรุณาลองใหม่อีกครั้ง</span>
-        <button class="poi-retry" onclick="openPOIModal('${dcode}','${type}','${districtName.replace(/'/g, "")}')">ลองอีกครั้ง</button>
+        <button class="poi-retry" onclick="openPOIModal('${dcode}','${type}','${districtName.replace(/'/g, "")}'${subNameTh ? `,'${subNameTh}'` : ''})">ลองอีกครั้ง</button>
       </div>`;
   }
 }
