@@ -369,16 +369,15 @@
 
   .section-title {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10px; letter-spacing: 0.3em;
+    font-size: 11px; letter-spacing: 0.22em;
+    font-weight: 700;
     color: var(--accent); text-transform: uppercase;
     padding-bottom: 8px; border-bottom: 1px dashed var(--line);
     margin-bottom: 14px;
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
+    justify-content: flex-start;
   }
-  .section-title .num {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
-    font-style: italic; font-size: 14px; color: var(--ink-3);
-  }
+  .section-title .sec-star { font-size: 13px; color: var(--accent); font-style: normal; }
 
   /* Zone code chip */
   .zone-chips {
@@ -1171,15 +1170,19 @@
   .law-subhead {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 700;
     color: var(--ink);
-    margin: 18px 0 10px;
+    margin: 16px 0 10px;
     padding-bottom: 6px;
     border-bottom: 1px dashed var(--line);
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .law-subhead .law-count {
+    font-weight: 400;
+    color: var(--ink-3);
   }
   .law-subhead .law-count {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
@@ -1870,15 +1873,18 @@
   .section-title.collapsible:hover { color: var(--accent-2); }
   .law-subhead.collapsible:hover { color: var(--accent); }
   .collapse-chevron {
-    margin-left: auto;
-    font-size: 11px;
-    color: var(--ink-3);
+    font-size: 10px;
+    color: var(--accent);
     transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
     flex-shrink: 0;
+    margin-right: 8px;
+    order: -1;            /* ดันไปหน้าสุด */
   }
   .section-title.collapsible { justify-content: flex-start; }
-  .section-title.collapsible .collapse-chevron { margin-left: auto; }
+  .law-subhead.collapsible { justify-content: flex-start; }
   .collapsed > .collapse-chevron { transform: rotate(-90deg); }
+  /* law-subhead = หัวข้อย่อย สีดำ bold (chevron สีทอง) */
+  .law-subhead.collapsible .law-count { color: var(--ink-3); font-weight: 400; }
 
   .collapse-body {
     overflow: hidden;
@@ -2118,12 +2124,12 @@ function render(id){
       <div class="lv-source">ทำเลถนนหลัก · กรมธนารักษ์ 2566-2569</div>
     </div>` : ''}
 
-    <div class="section-title"><span class="num">i.</span> Kind of Land · ประเภทการใช้ที่ดิน</div>
+    <div class="section-title">Kind of Land · ประเภทการใช้ที่ดิน</div>
     <div class="land-grid">${landRows}</div>
 
     ${buildLegalSection(d, 'district')}
 
-    <div class="section-title"><span class="num">iii.</span> Population · ประชากร</div>
+    <div class="section-title">Population · ประชากร</div>
     <div class="pop-headline">${fmt(d.pop)} <em>res.</em></div>
     <div class="pop-sub">REGISTERED · BMA CENSUS</div>
 
@@ -2163,7 +2169,7 @@ function render(id){
     </div>
 
     ${highlightsHtml ? `
-      <div class="section-title"><span class="num">iv.</span> Notable Places · สถานที่สำคัญ</div>
+      <div class="section-title">Notable Places · สถานที่สำคัญ</div>
       <div class="highlights"><div class="h-list">${highlightsHtml}</div></div>
     ` : ''}
 
@@ -2632,7 +2638,7 @@ function buildPermissionsBar(zoneCode) {
   sorted.forEach(u => counts[u.level]++);
 
   return `
-    <div class="section-title"><span class="num">★</span> What Can Be Built · สิ่งที่อนุญาตให้สร้าง</div>
+    <div class="section-title"><span class="sec-star">★</span> What Can Be Built · สิ่งที่อนุญาตให้สร้าง</div>
     <div class="perms-legend">
       <span class="lg-item lg-1">● ${counts[1]} Permitted</span>
       <span class="lg-item lg-2">◐ ${counts[2]} Conditional</span>
@@ -2878,7 +2884,7 @@ function buildLegalSection(district, scope) {
   ` : '';
 
   return `
-    <div class="section-title"><span class="num">ii.</span> กฎหมาย ข้อบังคับ และประมวลกฎหมายอาคาร</div>
+    <div class="section-title">กฎหมาย · Legal & Building Codes</div>
 
     <div class="law-scope-tag">${scopeLabel} · โซน ${zone} · ${zlaw.name}</div>
 
@@ -3295,7 +3301,7 @@ function renderDistrictWithSubs(d) {
   `).join('');
 
   const roadsHtml = roads.length ? `
-    <div class="section-title"><span class="num">v.</span> Notable Roads · ถนนสำคัญ</div>
+    <div class="section-title">Notable Roads · ถนนสำคัญ</div>
     <div class="street-list">
       ${roads.map(r => `
         <div class="street-row">
@@ -3329,7 +3335,7 @@ function renderDistrictWithSubs(d) {
       </div>
     </div>
 
-    <div class="section-title"><span class="num">i.</span> Subdistricts · แขวง</div>
+    <div class="section-title">Subdistricts · แขวง</div>
     <div class="sub-list">${subsHtml}</div>
 
     ${roadsHtml}
@@ -3416,12 +3422,12 @@ function renderSub(sub) {
       </div>
     </div>
 
-    <div class="section-title"><span class="num">i.</span> Land Type · ประเภทที่ดิน</div>
+    <div class="section-title">Land Type · ประเภทที่ดิน</div>
     <div class="land-grid">${landRows}</div>
 
     ${buildLegalSection(district, 'sub')}
 
-    <div class="section-title"><span class="num">iii.</span> Population · ประชากร</div>
+    <div class="section-title">Population · ประชากร</div>
     <div class="pop-headline">${fmt(sub.pop_est)} <em>est.</em></div>
     <div class="pop-sub">PRO-RATA ESTIMATE · BMA CENSUS 2563</div>
 
@@ -3694,49 +3700,76 @@ async function refreshLiveCounts(dcode, subNameTh) {
 // === ทำหัวข้อให้พับ/ขยายได้ (collapsible) ===
 function makeCollapsible(panel) {
   if (!panel) return;
-  // หัวข้อที่จะทำให้พับได้ (section-title ทุกอันยกเว้น i. แรก + law-subhead ทุกอัน)
-  const headings = Array.from(panel.querySelectorAll('.section-title, .law-subhead'));
 
   // หัวข้อที่ให้แสดงเริ่มต้น (ไม่พับ) — ข้อมูลหลักที่ควรเห็นทันที
   const keepOpen = ['kind of land', 'land type', 'ประเภทการใช้ที่ดิน', 'ประเภทที่ดิน'];
 
-  headings.forEach((head) => {
-    // ข้ามถ้าทำไปแล้ว
+  // ฟังก์ชันช่วย: ทำหัวข้อ + body ให้พับได้
+  function attachToggle(head, body, opened) {
+    head.classList.add('collapsible');
+    const chev = document.createElement('span');
+    chev.className = 'collapse-chevron';
+    chev.textContent = '▼';
+    head.insertBefore(chev, head.firstChild);
+    if (!opened) {
+      head.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+    head.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isCollapsed = body.classList.toggle('collapsed');
+      head.classList.toggle('collapsed', isCollapsed);
+    });
+  }
+
+  // === ขั้นที่ 1: ทำเฉพาะ section-title เป็นหัวข้อหลัก (พับ section ทั้งก้อน) ===
+  // law-subhead ที่อยู่ระหว่าง section จะถูกดูดเข้าไปใน body ของ section นั้นด้วย
+  const sections = Array.from(panel.querySelectorAll('.section-title'));
+  sections.forEach((head) => {
     if (head.dataset.collapsibleDone) return;
     head.dataset.collapsibleDone = '1';
 
     const headText = head.textContent.toLowerCase();
     const shouldKeepOpen = keepOpen.some(k => headText.includes(k));
 
-    // รวบรวม element ที่ตามมาจนถึง heading ถัดไป (section-title หรือ law-subhead)
+    // รวบรวมทุก element จนถึง section-title ถัดไป (รวม law-subhead ด้วย)
     const body = document.createElement('div');
     body.className = 'collapse-body';
     let sib = head.nextElementSibling;
     const toMove = [];
-    while (sib && !sib.classList.contains('section-title') && !sib.classList.contains('law-subhead')) {
+    while (sib && !sib.classList.contains('section-title')) {
       toMove.push(sib);
       sib = sib.nextElementSibling;
     }
-    if (toMove.length === 0) return; // ไม่มีเนื้อหาให้พับ
+    if (toMove.length === 0) return;
     toMove.forEach(el => body.appendChild(el));
     head.parentNode.insertBefore(body, sib);
 
-    // เพิ่มลูกศร + คลาส
-    head.classList.add('collapsible');
-    const chev = document.createElement('span');
-    chev.className = 'collapse-chevron';
-    chev.textContent = '▼';
-    head.appendChild(chev);
-    // หัวข้อหลักเปิดไว้ ส่วนที่เหลือพับ
-    if (!shouldKeepOpen) {
-      head.classList.add('collapsed');
-      body.classList.add('collapsed');
-    }
+    attachToggle(head, body, shouldKeepOpen);
 
-    // คลิกสลับ
-    head.addEventListener('click', () => {
-      const isCollapsed = body.classList.toggle('collapsed');
-      head.classList.toggle('collapsed', isCollapsed);
+    // === ขั้นที่ 2: ภายใน body ถ้ามี law-subhead → ทำเป็นหัวข้อย่อยพับได้ ===
+    const subHeads = Array.from(body.querySelectorAll('.law-subhead'));
+    subHeads.forEach((sub) => {
+      if (sub.dataset.collapsibleDone) return;
+      sub.dataset.collapsibleDone = '1';
+
+      // ลบ ▸ นำหน้าเดิม
+      sub.innerHTML = sub.innerHTML.replace(/^\s*▸\s*/, '');
+
+      const subBody = document.createElement('div');
+      subBody.className = 'collapse-body';
+      let s = sub.nextElementSibling;
+      const move = [];
+      while (s && !s.classList.contains('law-subhead') && !s.classList.contains('law-footnote')) {
+        move.push(s);
+        s = s.nextElementSibling;
+      }
+      if (move.length === 0) return;
+      move.forEach(el => subBody.appendChild(el));
+      sub.parentNode.insertBefore(subBody, s);
+
+      // หัวข้อย่อยเปิดไว้ (เพราะอยู่ในกฎหมายที่พับอยู่แล้ว)
+      attachToggle(sub, subBody, true);
     });
   });
 }
