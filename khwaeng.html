@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThaiGeolab · ข้อมูลแขวง</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg-deep: #f7f5f0; --bg-mid: #ffffff; --bg-soft: #fbfaf7; --bg-card: #ffffff;
+    --line: #e6e1d6; --line-2: #d4cdbd;
+    --ink: #2b2a26; --ink-2: #6b6658; --ink-3: #9c9588;
+    --accent: #b8860b; --accent-2: #a6750a; --copper: #c87f4a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-deep); color: var(--ink);
+    min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px; border-bottom: 1px solid var(--line);
+    background: rgba(247,245,240,0.95); backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 1000;
+  }
+  .brand { font-size: 18px; font-weight: 700; cursor: pointer; }
+  .brand i { font-style: italic; color: var(--accent); }
+  .back-link {
+    font-size: 13px; color: var(--ink-2); cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border: 1px solid var(--line-2); border-radius: 3px;
+    background: var(--bg-mid); transition: all 0.2s;
+  }
+  .back-link:hover { border-color: var(--accent); color: var(--accent); }
+
+  .khwaeng-hero {
+    padding: 24px 28px 18px;
+  }
+  .kh-crumb { font-size: 11px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .kh-title { font-size: 32px; font-weight: 700; line-height: 1.1; }
+  .kh-title em { font-style: italic; color: var(--copper); }
+  .kh-sub { font-size: 14px; color: var(--ink-2); margin-top: 4px; }
+
+  .layout {
+    display: grid; grid-template-columns: 1fr 380px;
+    gap: 0; height: calc(100vh - 150px); min-height: 500px;
+  }
+  #map { width: 100%; height: 100%; background: #e8e4d8; }
+
+  .info-panel {
+    background: var(--bg-soft); border-left: 1px solid var(--line);
+    overflow-y: auto; padding: 22px;
+  }
+  .filter-chips {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
+  .chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 20px;
+    border: 1px solid var(--line-2); background: var(--bg-mid);
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+    user-select: none;
+  }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip .chip-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .chip .chip-count { font-size: 10px; opacity: 0.7; font-weight: 600; }
+
+  .cat-section { margin-bottom: 22px; }
+  .cat-head {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px dashed var(--line);
+  }
+  .cat-head .cat-ico { font-size: 16px; }
+  .cat-head .cat-n { margin-left: auto; font-size: 11px; color: var(--ink-3); font-weight: 400; }
+
+  .place-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 3px;
+    margin-bottom: 7px; cursor: pointer; transition: all 0.2s;
+    background: var(--bg-mid);
+  }
+  .place-item:hover { border-color: var(--accent); transform: translateX(3px); }
+  .place-pin { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .place-info { flex: 1; min-width: 0; }
+  .place-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .place-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .place-link { font-size: 10px; color: var(--accent); text-decoration: none; }
+
+  .loading-box { text-align: center; padding: 50px 20px; color: var(--ink-3); }
+  .spinner {
+    width: 32px; height: 32px; margin: 0 auto 14px;
+    border: 3px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .summary-bar {
+    display: flex; gap: 0; margin-bottom: 18px;
+    border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+  }
+  .summary-cell {
+    flex: 1; text-align: center; padding: 12px 6px;
+    border-right: 1px solid var(--line); background: var(--bg-mid);
+  }
+  .summary-cell:last-child { border-right: none; }
+  .summary-num { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .summary-lbl { font-size: 9px; color: var(--ink-3); letter-spacing: 0.05em; text-transform: uppercase; margin-top: 2px; }
+
+  .leaflet-popup-content { font-family: inherit; }
+  .map-note {
+    position: absolute; bottom: 10px; left: 10px; z-index: 500;
+    background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 3px;
+    font-size: 10px; color: var(--ink-3); pointer-events: none;
+  }
+  .footer-note { font-size: 11px; color: var(--ink-3); font-style: italic; text-align: center; padding: 14px; }
+
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; height: auto; }
+    #map { height: 50vh; min-height: 340px; }
+    .info-panel { border-left: none; border-top: 1px solid var(--line); max-height: none; }
+    .kh-title { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand" onclick="goBack()">ThaiGeo<i>lab</i></div>
+  <div class="back-link" onclick="goBack()">◂ กลับสู่แผนที่เขต</div>
+</header>
+
+<div class="khwaeng-hero">
+  <div class="kh-crumb" id="crumb">BANGKOK</div>
+  <div class="kh-title" id="title">แขวง</div>
+  <div class="kh-sub" id="sub">กำลังโหลด...</div>
+</div>
+
+<div class="layout">
+  <div style="position:relative">
+    <div id="map"></div>
+    <div class="map-note">ข้อมูลแผนที่ · OpenStreetMap</div>
+  </div>
+  <div class="info-panel" id="panel">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div>กำลังโหลดข้อมูลสถานที่จาก OpenStreetMap...</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">โปรดตรวจทานข้อมูลก่อนนำไปประกอบการใช้งาน · ข้อมูลสถานที่จาก OpenStreetMap</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// === อ่านพารามิเตอร์ ===
+const P = new URLSearchParams(location.search);
+const dcode = P.get('d'), scode = P.get('s');
+const snameTh = P.get('th') || '', snameEn = P.get('en') || '';
+const distTh = P.get('dist') || '';
+const lat = parseFloat(P.get('lat')) || 13.75;
+const lng = parseFloat(P.get('lng')) || 100.5;
+
+document.getElementById('crumb').textContent = `BANGKOK / ${distTh.toUpperCase()}`;
+document.getElementById('title').innerHTML = `แขวง${snameTh}`;
+document.getElementById('sub').textContent = snameEn ? `${snameEn} · เขต${distTh}` : `เขต${distTh}`;
+
+function goBack() {
+  // กลับไปหน้า atlas พร้อมเปิดแขวงเดิม (ใช้ referrer หรือ default)
+  if (document.referrer && document.referrer.includes('bangkok_atlas')) {
+    history.back();
+  } else {
+    window.location.href = 'bangkok_atlas.html';
+  }
+}
+
+// === หมวดสถานที่ (category) ===
+const CATEGORIES = {
+  police:   { th:'สถานีตำรวจ', en:'Police', ico:'👮', color:'#3b6fb8', q:'["amenity"="police"]' },
+  hospital: { th:'โรงพยาบาล/สาธารณสุข', en:'Health', ico:'🏥', color:'#d0494b', q:'["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]' },
+  school:   { th:'สถานศึกษา', en:'Education', ico:'🎓', color:'#6b4ea6', q:'["amenity"~"^(school|college|university|kindergarten)$"]' },
+  temple:   { th:'วัด/ศาสนสถาน', en:'Worship', ico:'🛕', color:'#c87f4a', q:'["amenity"="place_of_worship"]' },
+  bank:     { th:'ธนาคาร/ATM', en:'Banking', ico:'🏧', color:'#2e8b6f', q:'["amenity"~"^(bank|atm)$"]' },
+  market:   { th:'ตลาด/ห้าง/ร้านค้า', en:'Shopping', ico:'🛒', color:'#c9952a', q:'["shop"~"^(supermarket|mall|convenience|department_store)$"]' },
+  transport:{ th:'ขนส่ง/สถานี', en:'Transit', ico:'🚉', color:'#5a7d8c', q:'["public_transport"="station"]' },
+  government:{ th:'หน่วยงานราชการ', en:'Government', ico:'🏛️', color:'#8b7355', q:'["office"="government"]' },
+  fuel:     { th:'ปั๊มน้ำมัน', en:'Fuel', ico:'⛽', color:'#7a8b3c', q:'["amenity"="fuel"]' },
+};
+
+// === Leaflet map ===
+const map = L.map('map', { zoomControl: true, attributionControl: false }).setView([lat, lng], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '© OpenStreetMap'
+}).addTo(map);
+
+// marker layers ต่อหมวด
+const layers = {};
+const placesByCategory = {};
+Object.keys(CATEGORIES).forEach(k => { layers[k] = L.layerGroup().addTo(map); placesByCategory[k] = []; });
+
+function makeIcon(cat) {
+  const c = CATEGORIES[cat];
+  return L.divIcon({
+    className: 'custom-pin',
+    html: `<div style="background:${c.color};width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff"><span style="transform:rotate(45deg);font-size:13px">${c.ico}</span></div>`,
+    iconSize: [26,26], iconAnchor: [13,26], popupAnchor: [0,-26]
+  });
+}
+
+// === Overpass query ===
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+
+async function fetchCategory(cat) {
+  const c = CATEGORIES[cat];
+  // ค้นในขอบเขตแขวง (admin_level 9) ก่อน, fallback เป็นรัศมีรอบจุดศูนย์กลาง
+  const queryArea = `[out:json][timeout:25];area["boundary"="administrative"]["admin_level"="9"]["name"="แขวง${snameTh}"]->.a;(node${c.q}(area.a);way${c.q}(area.a););out center 50;`;
+  const queryRadius = `[out:json][timeout:25];(node${c.q}(around:1500,${lat},${lng});way${c.q}(around:1500,${lat},${lng}););out center 50;`;
+
+  for (const q of [queryArea, queryRadius]) {
+    for (const ep of OVERPASS) {
+      try {
+        const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const items = (data.elements||[]).map(el => {
+          const t = el.tags||{};
+          const plat = el.lat || (el.center&&el.center.lat), plng = el.lon || (el.center&&el.center.lon);
+          if (!plat) return null;
+          return { name: t['name:th']||t.name||t['name:en']||c.th, lat:plat, lng:plng, tags:t };
+        }).filter(Boolean);
+        if (items.length > 0 || q === queryRadius) return items;
+      } catch(e) { continue; }
+    }
+  }
+  return [];
+}
+
+async function loadAll() {
+  const cats = Object.keys(CATEGORIES);
+  let total = 0;
+  for (const cat of cats) {
+    const items = await fetchCategory(cat);
+    placesByCategory[cat] = items;
+    total += items.length;
+    // วาง markers
+    items.forEach(it => {
+      const m = L.marker([it.lat, it.lng], { icon: makeIcon(cat) });
+      const gmap = `https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lng}`;
+      m.bindPopup(`<b>${it.name}</b><br><span style="color:#888;font-size:11px">${CATEGORIES[cat].th}</span><br><a href="${gmap}" target="_blank" style="color:#b8860b;font-size:11px">เปิดใน Google Maps →</a>`);
+      m.addTo(layers[cat]);
+      it._marker = m;
+    });
+    renderPanel(); // อัปเดตทีละหมวด
+  }
+  if (total === 0) {
+    document.getElementById('panel').innerHTML = '<div class="loading-box">ไม่พบข้อมูลสถานที่ในแขวงนี้จาก OpenStreetMap<br><span style="font-size:11px">ลองดูในแผนที่โดยตรง หรือข้อมูลอาจยังไม่ครบ</span></div>';
+  }
+}
+
+let activeFilter = 'all';
+function renderPanel() {
+  const panel = document.getElementById('panel');
+  const cats = Object.keys(CATEGORIES);
+  const totals = {}; let grand = 0;
+  cats.forEach(c => { totals[c] = placesByCategory[c].length; grand += totals[c]; });
+
+  // summary 3 หมวดเด่น
+  let html = `<div class="summary-bar">
+    <div class="summary-cell"><div class="summary-num">${totals.police||0}</div><div class="summary-lbl">ตำรวจ</div></div>
+    <div class="summary-cell"><div class="summary-num">${totals.hospital||0}</div><div class="summary-lbl">สาธารณสุข</div></div>
+    <div class="summary-cell"><div class="summary-num">${totals.school||0}</div><div class="summary-lbl">สถานศึกษา</div></div>
+    <div class="summary-cell"><div class="summary-num">${grand}</div><div class="summary-lbl">รวม</div></div>
+  </div>`;
+
+  // filter chips
+  html += '<div class="filter-chips">';
+  html += `<div class="chip ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">ทั้งหมด <span class="chip-count">${grand}</span></div>`;
+  cats.forEach(c => {
+    if (totals[c] === 0) return;
+    html += `<div class="chip ${activeFilter===c?'active':''}" onclick="setFilter('${c}')"><span class="chip-dot" style="background:${CATEGORIES[c].color}"></span>${CATEGORIES[c].ico} ${CATEGORIES[c].th} <span class="chip-count">${totals[c]}</span></div>`;
+  });
+  html += '</div>';
+
+  // รายการตามหมวด
+  cats.forEach(c => {
+    if (totals[c] === 0) return;
+    if (activeFilter !== 'all' && activeFilter !== c) return;
+    html += `<div class="cat-section"><div class="cat-head"><span class="cat-ico">${CATEGORIES[c].ico}</span> ${CATEGORIES[c].th} <span class="cat-n">${totals[c]} แห่ง</span></div>`;
+    placesByCategory[c].forEach((it, i) => {
+      const gmap = `https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lng}`;
+      html += `<div class="place-item" onclick="focusPlace('${c}',${i})">
+        <div class="place-pin" style="background:${CATEGORIES[c].color}">${CATEGORIES[c].ico}</div>
+        <div class="place-info">
+          <div class="place-name">${it.name}</div>
+          <div class="place-meta"><a href="${gmap}" target="_blank" class="place-link" onclick="event.stopPropagation()">เปิดใน Google Maps →</a></div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  panel.innerHTML = html;
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  // แสดง/ซ่อน layer
+  Object.keys(CATEGORIES).forEach(c => {
+    if (f === 'all' || f === c) { if(!map.hasLayer(layers[c])) layers[c].addTo(map); }
+    else { map.removeLayer(layers[c]); }
+  });
+  renderPanel();
+}
+
+function focusPlace(cat, i) {
+  const it = placesByCategory[cat][i];
+  if (!it) return;
+  map.setView([it.lat, it.lng], 17, { animate:true });
+  if (it._marker) it._marker.openPopup();
+}
+
+loadAll();
+</script>
+</body>
+</html>

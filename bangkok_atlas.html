@@ -1952,6 +1952,33 @@
     margin-top: 10px; font-style: italic;
   }
 
+
+  /* === ปุ่มดูข้อมูลแขวง === */
+  .khwaeng-detail-btn {
+    width: 100%;
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    border: none; border-radius: 4px;
+    padding: 16px 20px;
+    margin: 20px 0 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 0 6px 20px -8px rgba(184,134,11,0.5);
+    font-family: inherit;
+  }
+  .khwaeng-detail-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -8px rgba(184,134,11,0.65);
+  }
+  .kdb-icon { font-size: 24px; flex-shrink: 0; }
+  .kdb-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .kdb-title { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+  .kdb-sub { font-size: 10.5px; opacity: 0.85; line-height: 1.4; }
+  .kdb-arrow { font-size: 20px; flex-shrink: 0; transition: transform 0.25s; }
+  .khwaeng-detail-btn:hover .kdb-arrow { transform: translateX(5px); }
+
 </style>
 </head>
 <body>
@@ -3704,6 +3731,15 @@ function renderSub(sub) {
 
     ${buildPermissionsBar(district.primary_zone)}
 
+    <button class="khwaeng-detail-btn" onclick="openKhwaengDetail('${district.dcode}','${sub.scode}','${sub.sname_th}','${sub.sname_en.replace(/'/g,"")}','${district.name_th}')">
+      <span class="kdb-icon">🗺️</span>
+      <span class="kdb-text">
+        <span class="kdb-title">ดูข้อมูลแขวงนี้</span>
+        <span class="kdb-sub">แผนที่ละเอียด · ถนน · สถานที่สำคัญ · สิ่งอำนวยความสะดวก</span>
+      </span>
+      <span class="kdb-arrow">→</span>
+    </button>
+
     <div class="actions">
       <button class="btn" id="back-to-dist">◂ Back to ${district.name_en}</button>
       <button class="btn primary" onclick="drillOut()">Bangkok ⇲</button>
@@ -4017,6 +4053,19 @@ function makeCollapsible(panel) {
       attachToggle(sub, subBody, true);
     });
   });
+}
+
+// === เปิดหน้าข้อมูลแขวงรายละเอียด ===
+function openKhwaengDetail(dcode, scode, snameTh, snameEn, distTh) {
+  const bbox = DISTRICT_BBOX[dcode] || {};
+  const params = new URLSearchParams({
+    d: dcode, s: scode,
+    th: snameTh, en: snameEn,
+    dist: distTh,
+    lat: bbox.clat || 13.75,
+    lng: bbox.clng || 100.5
+  });
+  window.location.href = 'khwaeng.html?' + params.toString();
 }
 
 // เปิด modal แสดงรายชื่อ
