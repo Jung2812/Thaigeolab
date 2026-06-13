@@ -291,11 +291,15 @@
       </div>
     </div>
     <div class="side-card">
+      <h3>ภาคกลาง · 21 จังหวัด (ตัวอย่าง)</h3>
+      <div class="side-note" style="margin-bottom:10px">คลิกจังหวัดสีทองบนแผนที่เพื่อเข้าดูข้อมูล — นนทบุรี ปทุมธานี สมุทรปราการ อยุธยา สุพรรณบุรี ลพบุรี พิษณุโลก สุโขทัย เพชรบูรณ์ และอื่นๆ</div>
+      <div class="side-note" style="font-size:10.5px">* หน้าจังหวัดภาคกลางเป็นเวอร์ชันตัวอย่าง — ขอบเขตอำเภอเป็นข้อมูลจริง (OpenGISData-Thailand) ส่วนผังเมือง/ประชากรเป็นข้อมูลตัวอย่าง โปรดตรวจสอบก่อนใช้งาน</div>
+    </div>
+    <div class="side-card">
       <h3>กำลังพัฒนา</h3>
-      <div class="coming-soon"><span class="cs-th">นครพนม</span><span class="cs-tag">เร็วๆ นี้</span></div>
-      <div class="coming-soon"><span class="cs-th">เชียงใหม่</span><span class="cs-tag">เร็วๆ นี้</span></div>
-      <div class="coming-soon"><span class="cs-th">ภูเก็ต</span><span class="cs-tag">เร็วๆ นี้</span></div>
-      <div class="side-note" style="margin-top:14px">ขณะนี้เปิดให้ใช้งานเฉพาะกรุงเทพมหานคร จังหวัดอื่นอยู่ระหว่างการพัฒนา</div>
+      <div class="coming-soon"><span class="cs-th">ภาคเหนือ · เชียงใหม่</span><span class="cs-tag">เร็วๆ นี้</span></div>
+      <div class="coming-soon"><span class="cs-th">ภาคอีสาน · เพิ่มเติม</span><span class="cs-tag">เร็วๆ นี้</span></div>
+      <div class="coming-soon"><span class="cs-th">ภาคใต้ · ภูเก็ต</span><span class="cs-tag">เร็วๆ นี้</span></div>
     </div>
   </div>
 </div>
@@ -312,14 +316,42 @@ const svg = document.getElementById('thMap');
 const tip = document.getElementById('mapTip');
 const SVGNS = 'http://www.w3.org/2000/svg';
 
+// จังหวัดที่มีหน้าข้อมูลแล้ว (name_en → ไฟล์)
+const READY = {
+  'Bangkok Metropolis': 'bangkok_atlas.html',
+  'Nakhon Phanom': 'nakhonphanom_atlas.html',
+  'Sakon Nakhon': 'sakonnakhon_atlas.html',
+  'Nonthaburi': 'nonthaburi_atlas.html',
+  'Pathum Thani': 'pathumthani_atlas.html',
+  'Samut Prakan': 'samutprakan_atlas.html',
+  'Samut Sakhon': 'samutsakhon_atlas.html',
+  'Samut Songkhram': 'samutsongkhram_atlas.html',
+  'Nakhon Pathom': 'nakhonpathom_atlas.html',
+  'Phra Nakhon Si Ayutthaya': 'phranakhonsiayutthaya_atlas.html',
+  'Ang Thong': 'angthong_atlas.html',
+  'Sing Buri': 'singburi_atlas.html',
+  'Chai Nat': 'chainat_atlas.html',
+  'Lop Buri': 'lopburi_atlas.html',
+  'Saraburi': 'saraburi_atlas.html',
+  'Nakhon Nayok': 'nakhonnayok_atlas.html',
+  'Suphan Buri': 'suphanburi_atlas.html',
+  'Nakhon Sawan': 'nakhonsawan_atlas.html',
+  'Uthai Thani': 'uthaithani_atlas.html',
+  'Kamphaeng Phet': 'kamphaengphet_atlas.html',
+  'Phichit': 'phichit_atlas.html',
+  'Phitsanulok': 'phitsanulok_atlas.html',
+  'Sukhothai': 'sukhothai_atlas.html',
+  'Phetchabun': 'phetchabun_atlas.html',
+};
+
 // วาดจังหวัด
 TH.provinces.forEach(prov => {
   const p = document.createElementNS(SVGNS, 'path');
   p.setAttribute('d', prov.path);
-  p.setAttribute('class', prov.is_bangkok ? 'province ready' : 'province dimmed');
+  p.setAttribute('class', READY[prov.name_en] ? 'province ready' : 'province dimmed');
   p.dataset.th = prov.name_th;
   p.dataset.en = prov.name_en;
-  p.dataset.ready = prov.is_bangkok ? '1' : '0';
+  p.dataset.ready = READY[prov.name_en] ? '1' : '0';
   svg.appendChild(p);
 
   // hover tooltip
@@ -327,7 +359,7 @@ TH.provinces.forEach(prov => {
     const rect = svg.getBoundingClientRect();
     tip.style.left = (e.clientX - rect.left) + 'px';
     tip.style.top = (e.clientY - rect.top) + 'px';
-    if (prov.is_bangkok) {
+    if (READY[prov.name_en]) {
       tip.className = 'map-tip show';
       tip.innerHTML = prov.name_th + '<span class="sub">คลิกเพื่อเข้าสู่ข้อมูล →</span>';
     } else {
@@ -337,9 +369,9 @@ TH.provinces.forEach(prov => {
   });
   p.addEventListener('mouseleave', () => { tip.className = 'map-tip'; });
 
-  // คลิก — เฉพาะกรุงเทพ
-  if (prov.is_bangkok) {
-    p.addEventListener('click', goBangkok);
+  // คลิก — จังหวัดที่พร้อมใช้งาน
+  if (READY[prov.name_en]) {
+    p.addEventListener('click', () => goProvince(READY[prov.name_en]));
   }
 });
 
@@ -372,10 +404,11 @@ if (bkk) {
   svg.appendChild(lbl);
 }
 
-function goBangkok() {
+function goProvince(file) {
   document.body.classList.add('leaving');
-  setTimeout(() => { window.location.href = 'bangkok_atlas.html'; }, 600);
+  setTimeout(() => { window.location.href = file; }, 600);
 }
+function goBangkok() { goProvince('bangkok_atlas.html'); }
 
 document.getElementById('bkkItem').addEventListener('click', goBangkok);
 </script>
