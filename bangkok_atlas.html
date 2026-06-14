@@ -113,8 +113,8 @@
   /* HERO */
   .hero-strip {
     padding: 28px 36px 18px;
-    display: grid; grid-template-columns: 1fr auto;
-    align-items: end; gap: 24px;
+    display: grid; grid-template-columns: 1fr 120px auto;
+    align-items: center; gap: 24px;
     border-bottom: 1px solid var(--line);
   }
   .hero-title {
@@ -1979,6 +1979,31 @@
   .kdb-arrow { font-size: 20px; flex-shrink: 0; transition: transform 0.25s; }
   .khwaeng-detail-btn:hover .kdb-arrow { transform: translateX(5px); }
 
+
+  /* === ตราประจำกรุงเทพมหานคร (watermark เฟดซ้าย) === */
+  .hero-strip { position: relative; overflow: hidden; }
+  .hero-strip > * { position: relative; z-index: 1; }
+  /* ตราใน panel (เขต/แขวง) */
+  .panel-header { position: relative; overflow: hidden; }
+  .panel-header > * { position: relative; z-index: 1; }
+  .panel-header::after {
+    content: ""; position: absolute; right: -18px; top: 50%;
+    transform: translateY(-50%);
+    width: 120px; height: 120px;
+    background: url('logo_bangkok.png') no-repeat center / contain;
+    opacity: 0.6; pointer-events: none; z-index: 0;
+  }
+  body.dark .panel-header::after { opacity: 0.4; }
+
+
+  .hero-seal-img {
+    width: 110px; height: 110px; min-width: 110px; flex-shrink: 0;
+    background: url('logo_bangkok.png') no-repeat center / contain;
+    opacity: 0.85; align-self: center;
+  }
+  body.dark .hero-seal-img { opacity: 0.6; }
+  @media (max-width: 720px) { .hero-seal-img { width: 70px; height: 70px; } }
+
 </style>
 </head>
 <body>
@@ -2007,6 +2032,7 @@
   <div>
     <div class="hero-title">The City of <em>Angels</em>, mapped.</div>
   </div>
+  <div class="hero-seal-img"></div>
   <div class="hero-meta">
     <div>50 DISTRICTS · 180 SUB-DISTRICTS</div>
     <div><strong>1,568.7</strong> km² TOTAL AREA</div>
@@ -3692,6 +3718,25 @@ function renderSub(sub) {
       </div>
     </div>
 
+    <button class="khwaeng-detail-btn" onclick="openKhwaengDetail('${district.dcode}','${sub.scode}','${sub.sname_th}','${sub.sname_en.replace(/'/g,"")}','${district.name_th}')">
+      <span class="kdb-icon">🗺️</span>
+      <span class="kdb-text">
+        <span class="kdb-title">ดูข้อมูลแขวงนี้</span>
+        <span class="kdb-sub">แผนที่ละเอียด · ถนน · สถานที่สำคัญ · สิ่งอำนวยความสะดวก</span>
+      </span>
+      <span class="kdb-arrow">→</span>
+    </button>
+
+    ${sub.scode === '102902' ? `
+    <button class="khwaeng-detail-btn" style="background:linear-gradient(135deg,#6b6658,#2b2a26)" onclick="window.location.href='wongsawang_3d.html'">
+      <span class="kdb-icon">🏙️</span>
+      <span class="kdb-text">
+        <span class="kdb-title">ดูแผนที่ 3D (ตัวอย่าง)</span>
+        <span class="kdb-sub">โมเดล Low-poly · ความสูงอาคารจริง · ถนน · แม่น้ำ</span>
+      </span>
+      <span class="kdb-arrow">→</span>
+    </button>` : ''}
+
     <div class="section-title">Land Type · ประเภทที่ดิน</div>
     <div class="land-grid">${landRows}</div>
 
@@ -3731,14 +3776,6 @@ function renderSub(sub) {
 
     ${buildPermissionsBar(district.primary_zone)}
 
-    <button class="khwaeng-detail-btn" onclick="openKhwaengDetail('${district.dcode}','${sub.scode}','${sub.sname_th}','${sub.sname_en.replace(/'/g,"")}','${district.name_th}')">
-      <span class="kdb-icon">🗺️</span>
-      <span class="kdb-text">
-        <span class="kdb-title">ดูข้อมูลแขวงนี้</span>
-        <span class="kdb-sub">แผนที่ละเอียด · ถนน · สถานที่สำคัญ · สิ่งอำนวยความสะดวก</span>
-      </span>
-      <span class="kdb-arrow">→</span>
-    </button>
 
     <div class="actions">
       <button class="btn" id="back-to-dist">◂ Back to ${district.name_en}</button>
@@ -4125,27 +4162,28 @@ function closePOIModal() {
 }
 
 
-
-// === Theme Toggle (โหมดกลางวัน/กลางคืน) ===
+// === Theme Toggle (โหมดกลางวัน/กลางคืน) — sync ทุกหน้าผ่าน localStorage ===
 (function(){
   const btn = document.getElementById('themeToggle');
   const icon = btn && btn.querySelector('.theme-icon');
-  if (!btn) return;
-  // เริ่มต้นตามที่ระบบ user ตั้งไว้
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   function apply(dark) {
     document.body.classList.toggle('dark', dark);
-    if (icon) icon.textContent = dark ? '☀' : '☾';
-    btn.title = dark ? 'สลับเป็นโหมดกลางวัน' : 'สลับเป็นโหมดกลางคืน';
-    // รี-apply โหมดแผนที่ปัจจุบัน เผื่อสีต้องอัปเดต
+    if (icon) icon.textContent = dark ? '\u2600' : '\u263e';
+    if (btn) btn.title = dark ? 'สลับเป็นโหมดกลางวัน' : 'สลับเป็นโหมดกลางคืน';
     const cur = document.querySelector('input[name="mode"]:checked');
     if (cur && typeof applyMode === 'function') applyMode(cur.value);
   }
-  apply(prefersDark);
-  btn.addEventListener('click', () => {
-    apply(!document.body.classList.contains('dark'));
+  // ค่าเริ่มต้น = day; อ่านจาก localStorage ถ้าเคยตั้งไว้
+  let dark = false;
+  try { dark = localStorage.getItem('thaigeolab-theme') === 'dark'; } catch(e) {}
+  apply(dark);
+  if (btn) btn.addEventListener('click', () => {
+    const next = !document.body.classList.contains('dark');
+    apply(next);
+    try { localStorage.setItem('thaigeolab-theme', next ? 'dark' : 'light'); } catch(e) {}
   });
 })();
+
 
 // Default selection
 setTimeout(() => {

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>วงศ์สว่าง 3D · ThaiGeolab</title>
+<style>
+  :root {
+    --bg-deep: #f7f5f0; --ink: #2b2a26; --ink-2: #6b6658; --ink-3: #9c9588;
+    --accent: #b8860b; --accent-2: #a6750a; --line: #e6e1d6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-deep); color: var(--ink);
+  }
+  #scene { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  .hud {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; pointer-events: none;
+  }
+  .hud-left { pointer-events: auto; }
+  .brand { font-size: 16px; font-weight: 700; cursor: pointer; }
+  .brand i { color: var(--accent); font-style: italic; }
+  .title-row { margin-top: 2px; }
+  .title-th { font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+  .title-sub { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
+  .badge {
+    display: inline-block; font-size: 10px; letter-spacing: 0.12em;
+    color: var(--accent); border: 1px solid var(--accent);
+    padding: 2px 8px; border-radius: 20px; margin-top: 6px;
+    text-transform: uppercase; background: rgba(255,255,255,0.5);
+  }
+
+  .panel {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 18px 24px; pointer-events: none; gap: 16px;
+  }
+  .legend {
+    pointer-events: auto;
+    background: rgba(255,255,255,0.82); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; font-size: 11px; line-height: 1.9;
+    max-width: 220px;
+  }
+  .legend h4 { font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px; }
+  .legend .row { display: flex; align-items: center; gap: 8px; }
+  .legend .sw { width: 14px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .controls-hint {
+    pointer-events: auto; text-align: right;
+    background: rgba(255,255,255,0.82); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 14px; font-size: 11px; color: var(--ink-2); line-height: 1.7;
+  }
+  .controls-hint kbd {
+    background: var(--bg-deep); border: 1px solid var(--line); border-radius: 3px;
+    padding: 1px 5px; font-size: 10px; font-family: inherit;
+  }
+
+  .loading {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg-deep); gap: 18px; transition: opacity 0.6s ease;
+  }
+  .loading.done { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--ink-2); }
+  .loading-sub { font-size: 11px; color: var(--ink-3); }
+
+  .toggle-btn {
+    pointer-events: auto; cursor: pointer;
+    background: rgba(255,255,255,0.82); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 12px; font-size: 11px; color: var(--ink); font-family: inherit;
+    transition: all 0.2s;
+  }
+  .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .hud-right { pointer-events: auto; display: flex; gap: 8px; flex-direction: column; align-items: flex-end; }
+
+  @media (max-width: 640px) {
+    .title-th { font-size: 20px; }
+    .legend { max-width: 150px; font-size: 10px; }
+    .controls-hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">กำลังดึงข้อมูลแผนที่จาก OpenStreetMap...</div>
+  <div class="loading-sub" id="loadingSub">แขวงวงศ์สว่าง เขตบางซื่อ</div>
+</div>
+
+<div class="hud">
+  <div class="hud-left">
+    <div class="brand" onclick="window.location.href='bangkok_atlas.html'">ThaiGeo<i>lab</i></div>
+    <div class="title-row">
+      <div class="title-th">แขวงวงศ์สว่าง</div>
+      <div class="title-sub">Wong Sawang · เขตบางซื่อ · 3D Massing</div>
+      <span class="badge">LOW-POLY · OSM LIVE</span>
+    </div>
+  </div>
+  <div class="hud-right">
+    <button class="toggle-btn active" id="btnRotate">⟳ หมุนอัตโนมัติ</button>
+    <button class="toggle-btn active" id="btnCars">🚗 รถวิ่ง</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="legend">
+    <h4>สัญลักษณ์ · Legend</h4>
+    <div class="row"><span class="sw" style="background:#d9cba8"></span> อาคารทั่วไป</div>
+    <div class="row"><span class="sw" style="background:#c9a84a"></span> อาคารสูง / เด่น</div>
+    <div class="row"><span class="sw" style="background:#b8860b"></span> สถานที่สำคัญ (iconic)</div>
+    <div class="row"><span class="sw" style="background:#8fa9b8"></span> แม่น้ำเจ้าพระยา</div>
+    <div class="row"><span class="sw" style="background:#cfc8b8"></span> ถนน</div>
+    <div class="row" id="statRow" style="margin-top:6px;color:var(--ink-3);font-size:10px"></div>
+  </div>
+  <div class="controls-hint">
+    <div><kbd>ลาก</kbd> หมุนมุมมอง</div>
+    <div><kbd>สกอลล์</kbd> ซูม · <kbd>คลิกขวาลาก</kbd> เลื่อน</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== ค่าพื้นฐาน =====================
+// bounding box แขวงวงศ์สว่าง (ติดแม่น้ำเจ้าพระยาทิศตะวันตก, ทางรถไฟทิศใต้)
+const BBOX = { s: 13.808, w: 100.508, n: 13.830, e: 100.530 };
+const LAT0 = (BBOX.s + BBOX.n) / 2;
+const LNG0 = (BBOX.w + BBOX.e) / 2;
+// เมตรต่อองศา (ที่ละติจูดกรุงเทพ)
+const M_PER_DEG_LAT = 110574;
+const M_PER_DEG_LNG = 111320 * Math.cos(LAT0 * Math.PI / 180);
+// สเกลลงเพื่อให้ scene พอดี (1 หน่วย = 1 เมตร, แต่ scale ลง)
+const SCALE = 0.05;
+
+function project(lat, lng) {
+  // คืน {x, z} ในระบบ Three (x = ตะวันออก, z = ใต้)
+  const x = (lng - LNG0) * M_PER_DEG_LNG * SCALE;
+  const z = -(lat - LAT0) * M_PER_DEG_LAT * SCALE;
+  return { x, z };
+}
+
+// palette โทนครีม/ทอง
+const COLORS = {
+  ground: 0xeae4d6,
+  buildingLow: 0xd9cba8,
+  buildingMid: 0xc9a84a,
+  buildingIcon: 0xb8860b,
+  road: 0xcfc8b8,
+  roadMajor: 0xbdb49c,
+  rail: 0xa89a7a,
+  water: 0x8fa9b8,
+  carBody: [0xb8860b, 0xa6750a, 0x6b6658, 0xc87f4a, 0x8fa9b8],
+};
+
+// ===================== Three.js setup =====================
+let scene, camera, renderer;
+let autoRotate = true, showCars = true;
+let cars = [];
+let roadPaths = []; // เก็บ path ถนนหลักไว้ให้รถวิ่ง
+let camAngle = 0.6, camPitch = 0.62, camDist = 90;
+let camTarget = new THREE.Vector3(0, 0, 0);
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf7f5f0);
+  scene.fog = new THREE.Fog(0xf7f5f0, 120, 280);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+  updateCamera();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.getElementById('scene').appendChild(renderer.domElement);
+
+  // แสง: ดวงอาทิตย์เฉียง + ambient อุ่น
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.15);
+  sun.position.set(60, 110, 40);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  const d = 140;
+  sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+  sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 400;
+  sun.shadow.bias = -0.0004;
+  scene.add(sun);
+  scene.add(new THREE.AmbientLight(0xfff0d8, 0.62));
+  const fill = new THREE.HemisphereLight(0xfffaf0, 0xd8cdb8, 0.45);
+  scene.add(fill);
+
+  // พื้น
+  const groundGeo = new THREE.PlaneGeometry(600, 600);
+  const groundMat = new THREE.MeshLambertMaterial({ color: COLORS.ground });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.1;
+  ground.receiveShadow = true;
+  scene.add(ground);
+}
+
+function updateCamera() {
+  const x = camTarget.x + camDist * Math.cos(camPitch) * Math.sin(camAngle);
+  const y = camTarget.y + camDist * Math.sin(camPitch);
+  const z = camTarget.z + camDist * Math.cos(camPitch) * Math.cos(camAngle);
+  camera.position.set(x, y, z);
+  camera.lookAt(camTarget);
+}
+
+// ===================== ดึงข้อมูล OSM =====================
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+
+async function fetchOSM() {
+  const q = `[out:json][timeout:35];
+(
+  way["building"](${BBOX.s},${BBOX.w},${BBOX.n},${BBOX.e});
+  way["highway"](${BBOX.s},${BBOX.w},${BBOX.n},${BBOX.e});
+  way["waterway"="river"](${BBOX.s},${BBOX.w},${BBOX.n},${BBOX.e});
+  way["natural"="water"](${BBOX.s},${BBOX.w},${BBOX.n},${BBOX.e});
+  way["railway"="rail"](${BBOX.s},${BBOX.w},${BBOX.n},${BBOX.e});
+);
+out body geom;`;
+
+  for (const ep of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(ep, {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(q),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.elements && data.elements.length) return data.elements;
+    } catch (e) { continue; }
+  }
+  return null;
+}
+
+// ===================== สร้าง mesh จาก OSM =====================
+function buildingHeight(tags) {
+  // คืนความสูงเมตร อ้างอิงข้อมูลจริง
+  if (tags.height) {
+    const h = parseFloat(tags.height);
+    if (!isNaN(h)) return h;
+  }
+  if (tags['building:levels']) {
+    const lv = parseFloat(tags['building:levels']);
+    if (!isNaN(lv)) return lv * 3.2; // 3.2m ต่อชั้น
+  }
+  // ประมาณตามประเภท
+  const b = tags.building;
+  if (b === 'apartments' || b === 'residential') return 18;
+  if (b === 'commercial' || b === 'office' || b === 'retail') return 15;
+  if (b === 'house' || b === 'detached') return 6;
+  if (b === 'hospital') return 24;
+  if (b === 'school' || b === 'university') return 12;
+  return 9; // default ~3 ชั้น
+}
+
+function isIconic(tags) {
+  // สถานที่สำคัญ → poly เพิ่ม + สีทองเข้ม
+  if (tags.amenity === 'place_of_worship') return true;
+  if (tags.railway === 'station' || tags.public_transport === 'station') return true;
+  if (tags.building === 'train_station' || tags.building === 'transportation') return true;
+  if (tags.amenity === 'hospital') return true;
+  if (tags.tourism || tags.historic) return true;
+  const h = buildingHeight(tags);
+  return h >= 40; // ตึกสูงมากถือเป็น landmark
+}
+
+function geomToShape(geom) {
+  // geom = [{lat,lon}...] → THREE.Shape ในระนาบ XZ (ใช้ x,y ของ shape = x,z โลก)
+  const shape = new THREE.Shape();
+  geom.forEach((pt, i) => {
+    const p = project(pt.lat, pt.lon);
+    if (i === 0) shape.moveTo(p.x, p.z);
+    else shape.lineTo(p.x, p.z);
+  });
+  return shape;
+}
+
+function addBuilding(geom, tags, group) {
+  if (!geom || geom.length < 3) return;
+  const h = buildingHeight(tags) * SCALE;
+  const iconic = isIconic(tags);
+  const tall = buildingHeight(tags) >= 28;
+
+  const shape = geomToShape(geom);
+  // low-poly: ไม่มี bevel, segment น้อย; iconic เพิ่ม steps ให้เห็น taper
+  const extrudeSettings = {
+    depth: h, bevelEnabled: false,
+    steps: iconic ? 2 : 1,
+    curveSegments: iconic ? 4 : 1,
+  };
+  let geo;
+  try {
+    geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  } catch (e) { return; }
+  // extrude สร้างในแกน z → หมุนให้ตั้งขึ้นแกน y
+  geo.rotateX(-Math.PI / 2);
+
+  let color;
+  if (iconic) color = COLORS.buildingIcon;
+  else if (tall) color = COLORS.buildingMid;
+  else color = COLORS.buildingLow;
+
+  // เปลี่ยนเฉดเล็กน้อยตามความสูงให้ดูมีมิติ
+  const mat = new THREE.MeshLambertMaterial({ color, flatShading: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  // iconic: เพิ่มยอด/หลังคาทรงปิรามิดเล็กน้อย (poly เพิ่ม)
+  if (iconic && tall) {
+    const box = new THREE.Box3().setFromObject(mesh);
+    const cx = (box.min.x + box.max.x) / 2;
+    const cz = (box.min.z + box.max.z) / 2;
+    const w = Math.min(box.max.x - box.min.x, box.max.z - box.min.z);
+    const capGeo = new THREE.ConeGeometry(w * 0.5, w * 0.45, 4);
+    const cap = new THREE.Mesh(capGeo, new THREE.MeshLambertMaterial({ color: 0xa6750a, flatShading: true }));
+    cap.position.set(cx, h + w * 0.22, cz);
+    cap.rotation.y = Math.PI / 4;
+    cap.castShadow = true;
+    group.add(cap);
+  }
+  return mesh;
+}
+
+function addRoad(geom, tags, group) {
+  if (!geom || geom.length < 2) return;
+  const hw = tags.highway;
+  const major = ['primary','secondary','trunk','tertiary','motorway'].includes(hw);
+  const width = major ? 5 : (hw === 'residential' || hw === 'unclassified' ? 2.6 : 2) ;
+  const color = major ? COLORS.roadMajor : COLORS.road;
+
+  // สร้าง ribbon ตาม polyline
+  const pts = geom.map(g => project(g.lat, g.lon));
+  const positions = [];
+  const w = width * SCALE * 0.5;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const nx = -dz / len * w, nz = dx / len * w; // normal
+    // 2 สามเหลี่ยม
+    positions.push(a.x + nx, 0.05, a.z + nz);
+    positions.push(a.x - nx, 0.05, a.z - nz);
+    positions.push(b.x + nx, 0.05, b.z + nz);
+    positions.push(b.x + nx, 0.05, b.z + nz);
+    positions.push(a.x - nx, 0.05, a.z - nz);
+    positions.push(b.x - nx, 0.05, b.z - nz);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  // เก็บ path ถนนหลักไว้ให้รถวิ่ง (เฉพาะ major + ยาวพอ)
+  if (major && pts.length >= 2) {
+    roadPaths.push(pts.map(p => new THREE.Vector3(p.x, 0.4, p.z)));
+  }
+}
+
+function addWater(geom, group) {
+  if (!geom || geom.length < 3) return;
+  const shape = geomToShape(geom);
+  let geo;
+  try { geo = new THREE.ShapeGeometry(shape); } catch(e) { return; }
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshLambertMaterial({ color: COLORS.water, transparent: true, opacity: 0.85 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0.02;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+}
+
+function addRiverband(geom, group) {
+  // waterway=river เป็นเส้น → ribbon กว้าง
+  if (!geom || geom.length < 2) return;
+  const pts = geom.map(g => project(g.lat, g.lon));
+  const positions = [];
+  const w = 38 * SCALE; // แม่น้ำเจ้าพระยากว้าง ~200-300m แต่ที่นี่ขอบเขตเลยใช้กว้างพอเห็น
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const nx = -dz / len * w, nz = dx / len * w;
+    positions.push(a.x + nx, 0.03, a.z + nz);
+    positions.push(a.x - nx, 0.03, a.z - nz);
+    positions.push(b.x + nx, 0.03, b.z + nz);
+    positions.push(b.x + nx, 0.03, b.z + nz);
+    positions.push(a.x - nx, 0.03, a.z - nz);
+    positions.push(b.x - nx, 0.03, b.z - nz);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ color: COLORS.water, side: THREE.DoubleSide, transparent: true, opacity: 0.88 });
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+}
+
+function addRail(geom, group) {
+  if (!geom || geom.length < 2) return;
+  const pts = geom.map(g => project(g.lat, g.lon));
+  const linePts = pts.map(p => new THREE.Vector3(p.x, 0.3, p.z));
+  const geo = new THREE.BufferGeometry().setFromPoints(linePts);
+  const mat = new THREE.LineDashedMaterial({ color: COLORS.rail, dashSize: 1, gapSize: 0.6 });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  group.add(line);
+}
+
+// ===================== รถวิ่ง =====================
+function createCars() {
+  cars.forEach(c => scene.remove(c.mesh));
+  cars = [];
+  if (roadPaths.length === 0) return;
+  const numCars = Math.min(14, roadPaths.length * 2); // รถน้อยๆ
+  for (let i = 0; i < numCars; i++) {
+    const path = roadPaths[i % roadPaths.length];
+    if (path.length < 2) continue;
+    const color = COLORS.carBody[i % COLORS.carBody.length];
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 0.5, 2.0),
+      new THREE.MeshLambertMaterial({ color, flatShading: true })
+    );
+    body.castShadow = true;
+    // หลังคา
+    const top = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.4, 1.0),
+      new THREE.MeshLambertMaterial({ color, flatShading: true })
+    );
+    top.position.set(0, 0.42, -0.1);
+    const car = new THREE.Group();
+    car.add(body); car.add(top);
+    scene.add(car);
+    cars.push({
+      mesh: car, path,
+      t: Math.random(),
+      speed: 0.04 + Math.random() * 0.05,
+      dir: Math.random() > 0.5 ? 1 : -1,
+    });
+  }
+}
+
+function updateCars(dt) {
+  cars.forEach(car => {
+    if (!showCars) { car.mesh.visible = false; return; }
+    car.mesh.visible = true;
+    car.t += car.speed * car.dir * dt;
+    if (car.t > 1) car.t -= 1;
+    if (car.t < 0) car.t += 1;
+    const path = car.path;
+    if (!path || path.length < 2) return;
+    const ft = car.t * (path.length - 1);
+    const idx = Math.floor(ft);
+    const frac = ft - idx;
+    const a = path[Math.min(idx, path.length - 1)];
+    const b = path[Math.min(idx + 1, path.length - 1)];
+    if (!a || !b) return;
+    car.mesh.position.lerpVectors(a, b, frac);
+    const ang = Math.atan2(b.x - a.x, b.z - a.z);
+    car.mesh.rotation.y = ang + (car.dir < 0 ? Math.PI : 0);
+  });
+}
+
+// ===================== โหลด + สร้างฉาก =====================
+async function loadAndBuild() {
+  const elements = await fetchOSM();
+  const loadingText = document.getElementById('loadingText');
+
+  if (!elements) {
+    loadingText.textContent = 'ไม่สามารถดึงข้อมูล OSM ได้';
+    document.getElementById('loadingSub').innerHTML =
+      'เซิร์ฟเวอร์ Overpass อาจไม่ว่าง<br><button class="toggle-btn" style="margin-top:14px" onclick="location.reload()">↻ ลองใหม่อีกครั้ง</button>';
+    document.querySelector('.loading .spinner').style.display = 'none';
+    return;
+  }
+
+  const cityGroup = new THREE.Group();
+  let nB = 0, nR = 0, nW = 0, nIcon = 0;
+
+  elements.forEach(el => {
+    if (el.type !== 'way' || !el.geometry) return;
+    const tags = el.tags || {};
+    const geom = el.geometry;
+    if (tags.building) {
+      addBuilding(geom, tags, cityGroup); nB++;
+      if (isIconic(tags)) nIcon++;
+    } else if (tags.highway) {
+      addRoad(geom, tags, cityGroup); nR++;
+    } else if (tags.waterway === 'river') {
+      addRiverband(geom, cityGroup); nW++;
+    } else if (tags.natural === 'water') {
+      addWater(geom, cityGroup); nW++;
+    } else if (tags.railway === 'rail') {
+      addRail(geom, cityGroup);
+    }
+  });
+
+  scene.add(cityGroup);
+  createCars();
+
+  document.getElementById('statRow').textContent =
+    `${nB} อาคาร · ${nIcon} เด่น · ${nR} ถนน`;
+
+  // เริ่ม render
+  document.getElementById('loading').classList.add('done');
+}
+
+// ===================== Controls =====================
+function setupControls() {
+  const el = renderer.domElement;
+  let dragging = false, rightDrag = false, lastX = 0, lastY = 0;
+
+  el.addEventListener('mousedown', e => {
+    dragging = true; rightDrag = (e.button === 2);
+    lastX = e.clientX; lastY = e.clientY;
+    autoRotate = false; updateRotateBtn();
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    if (rightDrag) {
+      // pan
+      const panSpeed = camDist * 0.0016;
+      const right = new THREE.Vector3(Math.cos(camAngle), 0, -Math.sin(camAngle));
+      const fwd = new THREE.Vector3(Math.sin(camAngle), 0, Math.cos(camAngle));
+      camTarget.addScaledVector(right, -dx * panSpeed);
+      camTarget.addScaledVector(fwd, -dy * panSpeed);
+    } else {
+      camAngle -= dx * 0.006;
+      camPitch = Math.max(0.12, Math.min(1.45, camPitch + dy * 0.006));
+    }
+    updateCamera();
+  });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.max(25, Math.min(200, camDist + e.deltaY * 0.06));
+    updateCamera();
+  }, { passive: false });
+
+  // touch
+  let touchMode = null, lastTouchX = 0, lastTouchY = 0, lastDist = 0;
+  el.addEventListener('touchstart', e => {
+    autoRotate = false; updateRotateBtn();
+    if (e.touches.length === 1) {
+      touchMode = 'rotate'; lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      touchMode = 'zoom';
+      lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    }
+  }, { passive: false });
+  el.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (touchMode === 'rotate' && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - lastTouchX, dy = e.touches[0].clientY - lastTouchY;
+      lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
+      camAngle -= dx * 0.007; camPitch = Math.max(0.12, Math.min(1.45, camPitch + dy * 0.007));
+      updateCamera();
+    } else if (touchMode === 'zoom' && e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      camDist = Math.max(25, Math.min(200, camDist - (dist - lastDist) * 0.15));
+      lastDist = dist; updateCamera();
+    }
+  }, { passive: false });
+
+  document.getElementById('btnRotate').addEventListener('click', () => {
+    autoRotate = !autoRotate; updateRotateBtn();
+  });
+  document.getElementById('btnCars').addEventListener('click', () => {
+    showCars = !showCars;
+    document.getElementById('btnCars').classList.toggle('active', showCars);
+  });
+}
+function updateRotateBtn() {
+  document.getElementById('btnRotate').classList.toggle('active', autoRotate);
+}
+
+// ===================== Animation loop =====================
+let lastTime = 0;
+function animate(t) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((t - lastTime) / 16.67, 3) || 1;
+  lastTime = t;
+  if (autoRotate) { camAngle += 0.0014 * dt; updateCamera(); }
+  updateCars(dt);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===================== Start =====================
+initScene();
+setupControls();
+requestAnimationFrame(animate);
+loadAndBuild();
+</script>
+</body>
+</html>
