@@ -177,15 +177,15 @@ function goBack() {
 
 // === หมวดสถานที่ (category) ===
 const CATEGORIES = {
-  police:   { th:'สถานีตำรวจ', en:'Police', ico:'👮', color:'#3b6fb8', q:'["amenity"="police"]' },
-  hospital: { th:'โรงพยาบาล/สาธารณสุข', en:'Health', ico:'🏥', color:'#d0494b', q:'["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]' },
-  school:   { th:'สถานศึกษา', en:'Education', ico:'🎓', color:'#6b4ea6', q:'["amenity"~"^(school|college|university|kindergarten)$"]' },
-  temple:   { th:'วัด/ศาสนสถาน', en:'Worship', ico:'🛕', color:'#c87f4a', q:'["amenity"="place_of_worship"]' },
-  bank:     { th:'ธนาคาร/ATM', en:'Banking', ico:'🏧', color:'#2e8b6f', q:'["amenity"~"^(bank|atm)$"]' },
-  market:   { th:'ตลาด/ห้าง/ร้านค้า', en:'Shopping', ico:'🛒', color:'#c9952a', q:'["shop"~"^(supermarket|mall|convenience|department_store)$"]' },
-  transport:{ th:'ขนส่ง/สถานี', en:'Transit', ico:'🚉', color:'#5a7d8c', q:'["public_transport"="station"]' },
-  government:{ th:'หน่วยงานราชการ', en:'Government', ico:'🏛️', color:'#8b7355', q:'["office"="government"]' },
-  fuel:     { th:'ปั๊มน้ำมัน', en:'Fuel', ico:'⛽', color:'#7a8b3c', q:'["amenity"="fuel"]' },
+  police:   { th:'สถานีตำรวจ', en:'Police', ico:'👮', color:'#3b6fb8', q:'["amenity"="police"]', match:t=>t.amenity==='police' },
+  hospital: { th:'โรงพยาบาล/สาธารณสุข', en:'Health', ico:'🏥', color:'#d0494b', q:'["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]', match:t=>/^(hospital|clinic|doctors|pharmacy)$/.test(t.amenity||'') },
+  school:   { th:'สถานศึกษา', en:'Education', ico:'🎓', color:'#6b4ea6', q:'["amenity"~"^(school|college|university|kindergarten)$"]', match:t=>/^(school|college|university|kindergarten)$/.test(t.amenity||'') },
+  temple:   { th:'วัด/ศาสนสถาน', en:'Worship', ico:'🛕', color:'#c87f4a', q:'["amenity"="place_of_worship"]', match:t=>t.amenity==='place_of_worship' },
+  bank:     { th:'ธนาคาร/ATM', en:'Banking', ico:'🏧', color:'#2e8b6f', q:'["amenity"~"^(bank|atm)$"]', match:t=>/^(bank|atm)$/.test(t.amenity||'') },
+  market:   { th:'ตลาด/ห้าง/ร้านค้า', en:'Shopping', ico:'🛒', color:'#c9952a', q:'["shop"~"^(supermarket|mall|convenience|department_store)$"]', match:t=>/^(supermarket|mall|convenience|department_store)$/.test(t.shop||'') },
+  transport:{ th:'ขนส่ง/สถานี', en:'Transit', ico:'🚉', color:'#5a7d8c', q:'["public_transport"="station"]', match:t=>t.public_transport==='station' },
+  government:{ th:'หน่วยงานราชการ', en:'Government', ico:'🏛️', color:'#8b7355', q:'["office"="government"]', match:t=>t.office==='government' },
+  fuel:     { th:'ปั๊มน้ำมัน', en:'Fuel', ico:'⛽', color:'#7a8b3c', q:'["amenity"="fuel"]', match:t=>t.amenity==='fuel' },
 };
 
 // === Leaflet map ===
@@ -196,7 +196,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // marker layers ต่อหมวด
 const layers = {};
-const placesByCategory = {};
+let placesByCategory = {};
 Object.keys(CATEGORIES).forEach(k => { layers[k] = L.layerGroup().addTo(map); placesByCategory[k] = []; });
 
 function makeIcon(cat) {
@@ -208,39 +208,99 @@ function makeIcon(cat) {
   });
 }
 
-// === Overpass query ===
+// === Overpass query (รวมทุกหมวดเป็น query เดียว + cache เพื่อความเร็ว) ===
 const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const CACHE_KEY = 'tg_poi_v1_' + scode;
+const CACHE_TTL = 14 * 24 * 60 * 60 * 1000; // 14 วัน
 
-async function fetchCategory(cat) {
-  const c = CATEGORIES[cat];
-  // ค้นในขอบเขตแขวง (admin_level 9) ก่อน, fallback เป็นรัศมีรอบจุดศูนย์กลาง
-  const queryArea = `[out:json][timeout:25];area["boundary"="administrative"]["admin_level"="9"]["name"="แขวง${snameTh}"]->.a;(node${c.q}(area.a);way${c.q}(area.a););out center 50;`;
-  const queryRadius = `[out:json][timeout:25];(node${c.q}(around:1500,${lat},${lng});way${c.q}(around:1500,${lat},${lng}););out center 50;`;
-
-  for (const q of [queryArea, queryRadius]) {
-    for (const ep of OVERPASS) {
-      try {
-        const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
-        if (!res.ok) continue;
-        const data = await res.json();
-        const items = (data.elements||[]).map(el => {
-          const t = el.tags||{};
-          const plat = el.lat || (el.center&&el.center.lat), plng = el.lon || (el.center&&el.center.lon);
-          if (!plat) return null;
-          return { name: t['name:th']||t.name||t['name:en']||c.th, lat:plat, lng:plng, tags:t };
-        }).filter(Boolean);
-        if (items.length > 0 || q === queryRadius) return items;
-      } catch(e) { continue; }
-    }
+function classify(tags) {
+  for (const key of Object.keys(CATEGORIES)) {
+    if (CATEGORIES[key].match(tags)) return key;
   }
-  return [];
+  return null;
 }
 
-// === โหลดขอบเขตแขวง (polygon) มาวาดทับแผนที่ ===
+function buildUnifiedQuery(mode) {
+  const clauses = Object.values(CATEGORIES).map(c => {
+    if (mode === 'area') return `node${c.q}(area.a);way${c.q}(area.a);`;
+    return `node${c.q}(around:1500,${lat},${lng});way${c.q}(around:1500,${lat},${lng});`;
+  }).join('');
+  if (mode === 'area') {
+    return `[out:json][timeout:18];area["boundary"="administrative"]["admin_level"="9"]["name"="ตำบล${snameTh}"]->.a;(${clauses});out center 600;`.replace('ตำบล${snameTh}', `ตำบล${snameTh}`);
+  }
+  return `[out:json][timeout:18];(${clauses});out center 600;`;
+}
+
+async function runUnifiedQuery(mode) {
+  const q = buildUnifiedQuery(mode);
+  for (const ep of OVERPASS) {
+    try {
+      const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
+      if (!res.ok) continue;
+      const data = await res.json();
+      return data.elements || [];
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+function groupElements(elements) {
+  const grouped = {};
+  Object.keys(CATEGORIES).forEach(k => grouped[k] = []);
+  if (!elements) return grouped;
+  const seen = new Set();
+  elements.forEach(el => {
+    const t = el.tags || {};
+    const cat = classify(t);
+    if (!cat) return;
+    const plat = el.lat ?? (el.center && el.center.lat);
+    const plng = el.lon ?? (el.center && el.center.lon);
+    if (!plat) return;
+    const key = cat + '_' + plat.toFixed(5) + '_' + plng.toFixed(5);
+    if (seen.has(key)) return;
+    seen.add(key);
+    grouped[cat].push({ name: t['name:th']||t.name||t['name:en']||CATEGORIES[cat].th, lat:plat, lng:plng, tags:t });
+  });
+  return grouped;
+}
+
+async function fetchAllPOI() {
+  // ลอง query แบบ "ในเขตขอบเขตจริง" ก่อน (แม่นยำกว่า) — ถ้าไม่มีผล ลอง "รัศมีรอบจุดศูนย์กลาง"
+  let elements = await runUnifiedQuery('area');
+  if (!elements || elements.length === 0) {
+    elements = await runUnifiedQuery('radius');
+  }
+  return groupElements(elements);
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() - obj.ts > CACHE_TTL) return null;
+    return obj.data;
+  } catch(e) { return null; }
+}
+function saveCache(data) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+
+function drawMarkers(cat, items) {
+  layers[cat].clearLayers();
+  items.forEach(it => {
+    const m = L.marker([it.lat, it.lng], { icon: makeIcon(cat) });
+    const gmap = `https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lng}`;
+    m.bindPopup(`<b>${it.name}</b><br><span style="color:#888;font-size:11px">${CATEGORIES[cat].th}</span><br><a href="${gmap}" target="_blank" style="color:#b8860b;font-size:11px">เปิดใน Google Maps →</a>`);
+    m.addTo(layers[cat]);
+    it._marker = m;
+  });
+}
+
+// === โหลดขอบเขต (polygon) มาวาดทับแผนที่ ===
 let boundaryLayer = null;
 async function loadBoundary() {
-  // ดึง geometry ของขอบเขตแขวง (admin_level 9) แบบเต็ม
-  const q = `[out:json][timeout:25];relation["boundary"="administrative"]["admin_level"="9"]["name"="แขวง${snameTh}"];out geom;`;
+  const q = `[out:json][timeout:18];relation["boundary"="administrative"]["admin_level"="9"]["name"="ตำบล${snameTh}"];out geom;`;
   for (const ep of OVERPASS) {
     try {
       const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
@@ -248,43 +308,23 @@ async function loadBoundary() {
       const data = await res.json();
       const rel = (data.elements||[]).find(e => e.type === 'relation' && e.members);
       if (!rel) continue;
-
-      // รวบรวมเส้นขอบ (ways ที่เป็น outer) เป็น polygon
       const outerWays = rel.members.filter(m => m.type === 'way' && m.role === 'outer' && m.geometry);
       if (outerWays.length === 0) continue;
-
-      // เชื่อม ways เป็น ring(s)
-      const rings = [];
-      outerWays.forEach(w => {
-        const coords = w.geometry.map(g => [g.lat, g.lon]);
-        rings.push(coords);
-      });
-
-      // วาด polygon จางๆ
+      const rings = outerWays.map(w => w.geometry.map(g => [g.lat, g.lon]));
       boundaryLayer = L.polygon(rings, {
-        color: '#b8860b',        // เส้นขอบสีทอง
-        weight: 2.5,
-        opacity: 0.7,
-        fillColor: '#b8860b',
-        fillOpacity: 0.06,        // เติมจางมาก
-        dashArray: '6,5',         // เส้นประ
-        interactive: false
+        color: '#b8860b', weight: 2.5, opacity: 0.7,
+        fillColor: '#b8860b', fillOpacity: 0.06, dashArray: '6,5', interactive: false
       }).addTo(map);
-
-      // ปรับ view ให้พอดีกับขอบเขตแขวง
       map.fitBounds(boundaryLayer.getBounds(), { padding: [30,30], maxZoom: 16 });
-
-      // เพิ่ม label ชื่อแขวงกลางพื้นที่
       const center = boundaryLayer.getBounds().getCenter();
       L.marker(center, {
         interactive: false,
         icon: L.divIcon({
           className: 'khwaeng-label',
-          html: `<div style="white-space:nowrap;font-weight:700;font-size:14px;color:#8a6608;text-shadow:0 1px 3px rgba(255,255,255,0.9),0 0 8px rgba(255,255,255,0.7);pointer-events:none">แขวง${snameTh}</div>`,
+          html: `<div style="white-space:nowrap;font-weight:700;font-size:14px;color:#8a6608;text-shadow:0 1px 3px rgba(255,255,255,0.9),0 0 8px rgba(255,255,255,0.7);pointer-events:none">ตำบล${snameTh}</div>`,
           iconSize: [0,0], iconAnchor: [0,0]
         })
       }).addTo(map);
-
       return true;
     } catch(e) { continue; }
   }
@@ -292,28 +332,36 @@ async function loadBoundary() {
 }
 
 async function loadAll() {
-  // โหลดขอบเขตแขวงก่อน (จะปรับ zoom/view ให้พอดี)
-  await loadBoundary();
+  // 1) ขอบเขต + ข้อมูลสถานที่ ดึง "พร้อมกัน" ไม่รอกัน (เร็วกว่าเดิมมาก)
+  const boundaryPromise = loadBoundary();
 
-  const cats = Object.keys(CATEGORIES);
-  let total = 0;
-  for (const cat of cats) {
-    const items = await fetchCategory(cat);
-    placesByCategory[cat] = items;
-    total += items.length;
-    // วาง markers
-    items.forEach(it => {
-      const m = L.marker([it.lat, it.lng], { icon: makeIcon(cat) });
-      const gmap = `https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lng}`;
-      m.bindPopup(`<b>${it.name}</b><br><span style="color:#888;font-size:11px">${CATEGORIES[cat].th}</span><br><a href="${gmap}" target="_blank" style="color:#b8860b;font-size:11px">เปิดใน Google Maps →</a>`);
-      m.addTo(layers[cat]);
-      it._marker = m;
+  // 2) เช็ค cache ก่อน — ถ้ามีและยังไม่หมดอายุ แสดงผลทันที (ไม่ต้องรอเน็ต)
+  const cached = loadCache();
+  if (cached) {
+    placesByCategory = cached;
+    Object.keys(CATEGORIES).forEach(cat => drawMarkers(cat, cached[cat] || []));
+    renderPanel();
+    // อัปเดตเบื้องหลังแบบเงียบๆ เพื่อให้ครั้งถัดไปสดขึ้น (stale-while-revalidate)
+    fetchAllPOI().then(fresh => {
+      placesByCategory = fresh;
+      Object.keys(CATEGORIES).forEach(cat => drawMarkers(cat, fresh[cat] || []));
+      renderPanel();
+      saveCache(fresh);
     });
-    renderPanel(); // อัปเดตทีละหมวด
+  } else {
+    document.getElementById('panel').innerHTML = '<div class="loading-box">กำลังโหลดข้อมูลสถานที่...</div>';
+    const fresh = await fetchAllPOI();
+    placesByCategory = fresh;
+    Object.keys(CATEGORIES).forEach(cat => drawMarkers(cat, fresh[cat] || []));
+    let total = 0; Object.values(fresh).forEach(arr => total += arr.length);
+    if (total === 0) {
+      document.getElementById('panel').innerHTML = '<div class="loading-box">ไม่พบข้อมูลสถานที่ในตำบลนี้จาก OpenStreetMap<br><span style="font-size:11px">ลองดูในแผนที่โดยตรง หรือข้อมูลอาจยังไม่ครบ</span></div>';
+    } else {
+      renderPanel();
+    }
+    saveCache(fresh);
   }
-  if (total === 0) {
-    document.getElementById('panel').innerHTML = '<div class="loading-box">ไม่พบข้อมูลสถานที่ในแขวงนี้จาก OpenStreetMap<br><span style="font-size:11px">ลองดูในแผนที่โดยตรง หรือข้อมูลอาจยังไม่ครบ</span></div>';
-  }
+  await boundaryPromise;
 }
 
 let activeFilter = 'all';
