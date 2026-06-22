@@ -1,0 +1,3383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>นนทบุรี · Province Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,700;1,6..96,400&family=JetBrains+Mono:wght@300;400;500&family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Clean Cream / Light palette */
+    --bg-deep: #f7f5f0;   /* พื้นหลังครีมอ่อน */
+    --bg-mid:  #ffffff;   /* พื้นที่แผนที่ ขาว */
+    --bg-soft: #fbfaf7;   /* panel ครีมขาว */
+    --bg-card: #ffffff;   /* การ์ด ขาวสะอาด */
+    --line:    #e6e1d6;   /* เส้นแบ่งครีมเทา */
+    --line-2:  #d4cdbd;   /* เส้นเข้มขึ้น */
+    --ink:     #2b2a26;   /* ตัวอักษรหลัก เทาเข้มอบอุ่น */
+    --ink-2:   #6b6658;   /* ตัวอักษรรอง */
+    --ink-3:   #9c9588;   /* ตัวอักษรจาง */
+    --accent:  #b8860b;   /* ทองเข้ม (อ่านง่ายบนพื้นขาว) */
+    --accent-2:#a6750a;   /* ทองเข้มกว่า สำหรับ hover */
+    --road:    #5b8db8;   /* น้ำเงินถนน */
+    --water:   #cfe2ec;   /* น้ำ ฟ้าอ่อน */
+    --park:    #d6e4cf;   /* สวน เขียวอ่อน */
+    --district:#ece7dc;   /* พื้นที่เขต ครีม */
+    --district-hi:#e0d4b8; /* เขต hover */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--ink);
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(184,134,11,0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(91,141,184,0.05), transparent 50%);
+  }
+
+  /* HEADER */
+  header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    padding: 22px 36px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand .glyph {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 34px; font-weight: 700;
+    color: var(--accent); letter-spacing: -0.02em; line-height: 1;
+  }
+  .brand .glyph i { color: var(--ink); font-style: italic; font-weight: 400; }
+  .brand .thai {
+    font-size: 12px; color: var(--ink-3);
+    letter-spacing: 0.3em; text-transform: uppercase;
+  }
+
+  nav.top { display: flex; justify-content: center; gap: 38px; }
+  nav.top a {
+    color: var(--ink-2); text-decoration: none;
+    font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; position: relative;
+    padding-bottom: 4px; transition: color .2s;
+  }
+  nav.top a.active, nav.top a:hover { color: var(--accent); }
+  nav.top a.active::after {
+    content:""; position:absolute; left:0; right:0; bottom:-22px;
+    height:1px; background:var(--accent);
+  }
+
+  .header-right {
+    display:flex; align-items:center; gap: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink-3);
+  }
+  .live-dot {
+    width:7px; height:7px; border-radius:50%; background:var(--accent);
+    display:inline-block; margin-right:6px;
+    box-shadow:0 0 12px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 50% { opacity:.35; } }
+
+  /* HERO */
+  .hero-strip {
+    padding: 28px 36px 18px;
+    display: grid; grid-template-columns: 1fr 120px auto;
+    align-items: center; gap: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-title {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 52px; line-height: 1;
+    font-weight: 400; letter-spacing: -0.02em;
+  }
+  .hero-title em { color: var(--accent); font-style: italic; font-weight: 500; }
+  .hero-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink-3);
+    text-align: right; line-height: 1.8;
+  }
+  .hero-meta strong { color: var(--ink); font-weight: 500; }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 460px;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* MAP */
+  .map-shell {
+    position: relative;
+    background: var(--bg-mid);
+    border-right: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .map-frame { padding: 24px; height: 100%; display: flex; flex-direction: column; }
+
+  .map-bar {
+    display:flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; color: var(--ink-3);
+    letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .map-bar .crosshair { color: var(--accent); }
+
+  .map-canvas {
+    flex: 1; background: var(--bg-deep);
+    touch-action: none; cursor: grab;
+    border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+    min-height: 640px;
+  }
+  .map-canvas::before {
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+  }
+
+  svg.map {
+    width:100%; height:100%; display:block;
+    position:relative; z-index:1;
+    transition: transform .35s ease;
+    transform-origin: center center;
+  }
+
+  .district {
+    fill: var(--district);
+    stroke: var(--line-2);
+    stroke-width: 0.4;
+    cursor: pointer;
+    transition: fill .2s, stroke .2s, stroke-width .2s;
+    vector-effect: non-scaling-stroke;
+  }
+  .district:hover {
+    stroke: var(--accent);
+    stroke-width: 1.2;
+    filter: brightness(0.93);
+  }
+  .district.active {
+    fill: var(--district-hi);
+    stroke: var(--accent);
+    stroke-width: 1.8;
+    filter: brightness(0.97);
+  }
+
+  .district-label {
+    fill: var(--ink-2);
+    font-family: 'Sarabun', sans-serif;
+    font-size: calc(7px * var(--vbScale, 1));
+    font-weight: 400;
+    text-anchor: middle;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+    opacity: 0.7;
+  }
+  .district-label.show { opacity: 1; }
+
+  /* Compass */
+  .compass {
+    position: absolute; bottom: 24px; left: 24px;
+    width: 64px; height: 64px;
+    border: 1px solid var(--line-2);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+    font-family: 'Bodoni Moda', serif;
+  }
+  .compass .n { position:absolute; top:6px; color:var(--accent); font-size:11px; font-weight:500; }
+  .compass .e, .compass .s, .compass .w { position:absolute; color:var(--ink-3); font-size:10px; }
+  .compass .e { right:8px; }
+  .compass .s { bottom:6px; }
+  .compass .w { left:8px; }
+  .compass .needle {
+    width: 2px; height: 26px;
+    background: linear-gradient(to bottom, var(--accent) 50%, var(--ink-3) 50%);
+  }
+
+  /* Scale */
+  .scale {
+    position: absolute; bottom: 28px; right: 24px;
+    z-index: 2;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    text-align: center;
+  }
+  .scale-bar { display:flex; margin-top: 4px; }
+  .scale-bar span { width: 24px; height: 6px; border: 1px solid var(--ink-3); }
+  .scale-bar span:nth-child(odd) { background: var(--ink-3); }
+
+  /* Zoom */
+  .zoom {
+    position: absolute; top: 24px; right: 24px;
+    display:flex; flex-direction:column;
+    border: 1px solid var(--line-2);
+    background: rgba(255,255,255,0.85);
+    z-index: 2;
+  }
+  .zoom button {
+    width: 34px; height: 34px;
+    background:none; border:none;
+    color: var(--ink-2); cursor:pointer;
+    font-size: 16px; font-family: 'JetBrains Mono', monospace;
+    border-bottom: 1px solid var(--line-2);
+    transition: background .2s, color .2s;
+  }
+  .zoom button:last-child { border-bottom: none; }
+  .zoom button:hover { background: var(--bg-card); color: var(--accent); }
+
+  /* Layer toggle */
+  .layers {
+    position: absolute; top: 24px; left: 24px;
+    z-index: 2;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--line-2);
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-width: 180px;
+  }
+  .layers .head { color: var(--accent); margin-bottom: 8px; font-size: 9px; letter-spacing: 0.2em; }
+  .layers label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .layers input[type="checkbox"] { accent-color: var(--accent); }
+  .layers .key {
+    display: inline-block; width: 10px; height: 10px;
+    border: 1px solid var(--ink-3);
+  }
+
+  /* INFO PANEL */
+  .info-panel {
+    background: var(--bg-soft);
+    padding: 28px 30px;
+    overflow-y: auto;
+    max-height: calc(100vh - 145px);
+  }
+  .panel-empty {
+    color: var(--ink-3); text-align: center;
+    padding: 60px 20px;
+    font-style: italic;
+    font-family: 'Bodoni Moda', serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  .panel-empty .icon {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 64px; color: var(--accent);
+    opacity: 0.4; line-height: 1; margin-bottom: 18px;
+    font-style: italic;
+  }
+  .panel-empty .hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    margin-top: 18px; font-style: normal;
+  }
+
+  .panel-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px; margin-bottom: 22px;
+  }
+  .crumb {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .crumb .sep { color: var(--accent); margin: 0 6px; }
+  .district-name {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 36px; line-height: 1.05;
+    font-weight: 400; letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .district-name em { color: var(--accent); font-style: italic; font-weight: 500; }
+  .district-thai {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 400; font-size: 18px;
+    color: var(--ink-2); margin-top: 4px;
+  }
+  .district-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    margin-top: 8px;
+    letter-spacing: 0.15em;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--line);
+    border: 1px solid var(--line); margin-bottom: 22px;
+  }
+  .stat { background: var(--bg-card); padding: 16px 14px; }
+  .stat .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.2em;
+    color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .stat .value {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 24px; font-weight: 500;
+    color: var(--ink); line-height: 1;
+  }
+  .stat .unit {
+    font-size: 11px; color: var(--ink-3);
+    margin-left: 4px; font-weight: 300;
+  }
+
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.22em;
+    font-weight: 700;
+    color: var(--accent); text-transform: uppercase;
+    padding-bottom: 8px; border-bottom: 1px dashed var(--line);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+    justify-content: flex-start;
+  }
+  .section-title .sec-star { font-size: 13px; color: var(--accent); font-style: normal; }
+
+  /* Zone code chip */
+  .zone-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .zone-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 4px 9px;
+    background: var(--bg-card);
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+    letter-spacing: 0.08em;
+  }
+  .zone-chip.primary {
+    background: rgba(184,134,11,0.12);
+    border-color: var(--accent);
+    color: var(--accent-2);
+  }
+
+  .land-grid {
+    display: grid; grid-template-columns: 1fr; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .land-item {
+    display: grid;
+    grid-template-columns: 1fr 70px 38px;
+    align-items: center; gap: 10px;
+    font-size: 12.5px;
+  }
+  .land-item .name { color: var(--ink-2); font-weight: 400; line-height: 1.4; }
+  .land-item .name .code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--ink-3);
+    margin-left: 4px;
+    letter-spacing: 0.1em;
+  }
+  .land-item .bar {
+    height: 4px;
+    background: var(--line);
+    overflow:hidden; position: relative;
+  }
+  .land-item .bar::after {
+    content:""; position:absolute; inset:0;
+    width: var(--w, 0%);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 1s ease;
+  }
+  .land-item .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink); font-weight: 500;
+    text-align: right;
+  }
+
+  /* Law cards */
+  .law-card {
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    background: var(--bg-card);
+    position: relative;
+  }
+  .law-card::before {
+    content:""; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent);
+  }
+  .law-card .law-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--accent);
+    letter-spacing: 0.15em; margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .law-card .law-title {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500; font-size: 13px;
+    color: var(--ink); margin-bottom: 4px;
+  }
+  .law-card .law-desc {
+    font-size: 12px; color: var(--ink-2); line-height: 1.55;
+  }
+
+  /* Population */
+  .pop-headline {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 44px; font-weight: 400;
+    color: var(--ink); line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .pop-headline em { color: var(--accent); font-style: italic; font-weight: 500; }
+  .pop-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    margin-top: 4px; margin-bottom: 16px;
+  }
+
+  .gender-bar {
+    display: flex; height: 8px;
+    background: var(--line);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .gender-bar .male { background: var(--road); }
+  .gender-bar .female { background: var(--accent); }
+  .gender-info {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-3);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .gender-info span strong { color: var(--ink); font-weight: 500; }
+
+  .demo-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-bottom: 22px;
+  }
+  .demo { padding: 10px 8px; border: 1px solid var(--line); text-align: center; background: var(--bg-card); }
+  .demo .num {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 20px; font-weight: 500;
+    color: var(--ink); line-height: 1;
+  }
+  .demo .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--ink-3);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .highlights {
+    margin-bottom: 22px;
+  }
+  .highlights .h-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .highlights .h-list span {
+    font-size: 11.5px;
+    padding: 5px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+  }
+
+  .actions {
+    display: flex; gap: 8px;
+    padding-top: 18px; border-top: 1px dashed var(--line);
+  }
+  .btn {
+    flex: 1; padding: 11px;
+    background: transparent;
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn:hover {
+    background: var(--accent); color: var(--bg-deep); border-color: var(--accent);
+  }
+  .btn.primary {
+    background: var(--accent); color: var(--bg-deep); border-color: var(--accent);
+  }
+  .btn.primary:hover { background: var(--accent-2); }
+
+  /* Footer */
+  footer {
+    padding: 14px 36px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  footer .legend { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  footer .legend span {
+    display: flex; align-items: center; gap: 6px;
+  }
+  footer .legend i {
+    width: 10px; height: 10px; display: inline-block;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    background: rgba(255,255,255,0.97);
+    border: 1px solid var(--accent);
+    padding: 10px 14px;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity .15s;
+    font-size: 11px; color: var(--ink);
+    backdrop-filter: blur(8px);
+    min-width: 200px;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .tt-name {
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 500; font-size: 15px;
+    color: var(--accent); margin-bottom: 2px;
+  }
+  .tooltip .tt-thai {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11px; color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .tooltip .tt-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; color: var(--ink-3);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+  .tooltip .tt-zone {
+    color: var(--accent-2); font-weight: 500;
+  }
+
+  /* Search */
+  .search-box {
+    position: absolute; top: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--line-2);
+    padding: 8px 14px;
+    width: 280px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .search-box input {
+    flex: 1;
+    background: none; border: none; outline: none;
+    color: var(--ink);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+  }
+  .search-box input::placeholder { color: var(--ink-3); }
+  .search-box .icon {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* Scrollbar */
+  .info-panel::-webkit-scrollbar { width: 6px; }
+  .info-panel::-webkit-scrollbar-track { background: var(--bg-mid); }
+  .info-panel::-webkit-scrollbar-thumb { background: var(--line-2); }
+
+  /* === DRILL-DOWN === */
+  .back-btn {
+    position: absolute;
+    top: 24px; left: 50%;
+    transform: translateX(-50%) translateY(-60px);
+    z-index: 3;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 9px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .3s;
+    backdrop-filter: blur(8px);
+  }
+  .back-btn.show {
+    transform: translateX(-50%) translateY(0);
+  }
+  .back-btn:hover {
+    background: var(--accent);
+    color: var(--bg-deep);
+  }
+
+  /* Hide search when zoomed in */
+  .search-box.hidden { opacity: 0; pointer-events: none; }
+
+  /* Subdistrict styling */
+  .subdistrict {
+    fill: #e0e8d8;
+    stroke: var(--accent);
+    stroke-width: 1.2;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: fill .25s, stroke-width .25s, opacity .4s;
+    vector-effect: non-scaling-stroke;
+  }
+  .subdistrict.visible {
+    pointer-events: auto;
+  }
+  .subdistrict.visible { opacity: 1; }
+  .subdistrict:hover {
+    fill: #c4d4b4;
+    stroke-width: 1.6;
+    filter: brightness(0.96);
+  }
+  .subdistrict.active {
+    fill: #e8d9b0;
+    stroke-width: 2;
+    filter: brightness(0.96);
+  }
+  .sub-label {
+    fill: var(--accent-2);
+    font-family: 'Sarabun', sans-serif;
+    font-size: calc(6px * var(--vbScale, 1));
+    font-weight: 500;
+    text-anchor: middle;
+    pointer-events: none;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    transition: opacity .4s;
+  }
+  .sub-label .th {
+    font-size: calc(5px * var(--vbScale, 1));
+    fill: var(--ink-3);
+  }
+  .sub-label.visible { opacity: 1; }
+
+
+  /* Faded districts when drilled down */
+  .district.faded {
+    opacity: 0.1;
+    pointer-events: none;
+  }
+  .district-label.faded {
+    opacity: 0;
+  }
+
+  /* Road overlay (decorative) */
+  .road-overlay {
+    fill: none;
+    stroke: rgba(74,144,200,0.55);
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    opacity: 0;
+    transition: opacity .4s;
+    pointer-events: none;
+    vector-effect: non-scaling-stroke;
+  }
+  .road-overlay.visible { opacity: 1; }
+  .road-overlay.major {
+    stroke: rgba(74,144,200,0.8);
+    stroke-width: 2;
+  }
+
+  /* Breadcrumb in panel */
+  .crumb a {
+    color: var(--ink-2);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .2s;
+  }
+  .crumb a:hover { color: var(--accent); }
+
+  /* Sub list when in district view */
+  .sub-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 22px;
+  }
+  .sub-list-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .sub-list-item:hover {
+    border-color: var(--accent);
+    background: rgba(184,134,11,0.07);
+  }
+  .sub-list-item .sub-name {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .sub-list-item .sub-name em {
+    color: var(--accent);
+    font-style: italic;
+  }
+  .sub-list-item .sub-thai {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .sub-list-item .sub-stats {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-2);
+    text-align: right;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+  .sub-list-item .sub-stats strong {
+    color: var(--accent-2);
+    font-weight: 500;
+  }
+  .sub-list-item .arrow {
+    color: var(--accent);
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    transition: transform .2s;
+  }
+  .sub-list-item:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* Subdistrict notable streets */
+  .street-list {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-bottom: 18px;
+  }
+  .street-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border-left: 2px solid var(--road);
+    font-size: 12px;
+  }
+  .street-row .icon {
+    color: var(--road);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .street-row .street-name { color: var(--ink); }
+  .street-row .street-th { color: var(--ink-3); font-size: 11px; }
+  .street-row .street-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--accent-2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Mini map indicator */
+  .level-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+
+  /* === Cinematic zoom animations === */
+  .district.zoom-target {
+    animation: targetFlash 0.6s ease-out;
+  }
+  @keyframes targetFlash {
+    0%   { filter: brightness(1); stroke-width: 1.6; }
+    40%  { filter: brightness(0.88) saturate(1.3); stroke-width: 3.5; stroke: var(--accent); }
+    100% { filter: brightness(0.96); stroke-width: 1.8; }
+  }
+
+  .map-canvas.zooming {
+    cursor: zoom-in;
+  }
+  .map-canvas.zooming::before {
+    animation: gridPulse 1s ease-out;
+  }
+  @keyframes gridPulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  /* Arrival bounce on zoom-in */
+  svg.map.arrive {
+    animation: arriveBounce 0.4s ease-out;
+  }
+  @keyframes arriveBounce {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.015); }
+    100% { transform: scale(1); }
+  }
+
+  /* Subdistrict reveal animation */
+  .subdistrict {
+    transform: scale(0.94);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .subdistrict.visible {
+    animation: subPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes subPop {
+    0%   { opacity: 0; transform: scale(0.7); }
+    60%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Sub label fade */
+  .sub-label.visible {
+    animation: labelFade 0.6s ease-out forwards;
+  }
+  @keyframes labelFade {
+    0%   { opacity: 0; transform: translateY(3px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Road draw-in */
+  .road-overlay {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+  }
+  .road-overlay.visible {
+    animation: roadDraw 0.8s ease-out forwards;
+  }
+  @keyframes roadDraw {
+    to { stroke-dashoffset: 0; opacity: 0.6; }
+  }
+  .road-overlay.major.visible {
+    animation: roadDrawMajor 0.8s ease-out forwards;
+  }
+  @keyframes roadDrawMajor {
+    to { stroke-dashoffset: 0; opacity: 0.85; }
+  }
+
+  /* District fade-out smoothness */
+  .district { transition: opacity .35s ease, filter .25s ease, stroke .25s, stroke-width .25s; }
+  .district.faded { transition: opacity .25s ease; }
+
+  /* Back button cinematic entrance */
+  .back-btn {
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s;
+  }
+
+  /* Pulse ring effect on zoom-in target (decorative) */
+  .zoom-ring {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .zoom-ring.fire {
+    animation: zoomRing 0.8s ease-out forwards;
+  }
+  @keyframes zoomRing {
+    0%   { opacity: 0.9; stroke-width: 2; r: 8; }
+    100% { opacity: 0;   stroke-width: 0.3; r: 60; }
+  }
+
+
+  /* === PERMISSIONS GRID === */
+  .perms-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .perms-legend .lg-1 { color: #6bc97a; }
+  .perms-legend .lg-2 { color: #d4a017; }
+  .perms-legend .lg-3 { color: #c44a3a; }
+
+  .perms-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .perm-tile {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    transition: all .2s;
+    cursor: default;
+    position: relative;
+  }
+  .perm-tile:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .perm-tile svg {
+    flex-shrink: 0;
+  }
+  .perm-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .perm-en {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11.5px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .perm-th {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 10px;
+    color: var(--ink-3);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .perm-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Level 1: PERMITTED — green */
+  .perm-tile.lvl-1 svg { color: #6bc97a; }
+  .perm-tile.lvl-1 .perm-dot { background: #6bc97a; box-shadow: 0 0 6px rgba(107,201,122,0.5); }
+  .perm-tile.lvl-1 .perm-en { color: var(--ink); }
+
+  /* Level 2: CONDITIONAL — amber */
+  .perm-tile.lvl-2 svg { color: #d4a017; }
+  .perm-tile.lvl-2 .perm-dot {
+    background: transparent;
+    border: 2px solid #d4a017;
+    background: linear-gradient(to right, #d4a017 50%, transparent 50%);
+  }
+  .perm-tile.lvl-2 .perm-en { color: var(--ink-2); }
+
+  /* Level 3: RESTRICTED — muted red */
+  .perm-tile.lvl-3 {
+    opacity: 0.45;
+  }
+  .perm-tile.lvl-3 svg { color: #c44a3a; }
+  .perm-tile.lvl-3 .perm-dot {
+    background: transparent;
+    border: 2px solid #c44a3a;
+  }
+  .perm-tile.lvl-3 .perm-en { color: var(--ink-3); text-decoration: line-through; text-decoration-color: rgba(196,74,58,0.5); }
+
+  .perms-footnote {
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.5;
+    padding: 12px 0 18px;
+    font-style: italic;
+    border-top: 1px dashed var(--line);
+    margin-top: 4px;
+  }
+  .perms-footnote strong {
+    color: var(--accent);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+
+  /* === LEGAL / LAW SECTION (THAI) === */
+  .law-scope-tag {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(184,134,11,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent-2);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    letter-spacing: 0.02em;
+  }
+
+  .law-subhead {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .law-subhead .law-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--ink-3);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .law-zone-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .law-zone-item {
+    background: var(--bg-card);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .law-zone-item.full { grid-column: 1 / -1; }
+  .lz-label {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 400;
+  }
+  .lz-value {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+  .lz-prohibit {
+    color: #e8907a;
+    font-weight: 400;
+  }
+
+  .law-card.special-law::before { background: #c44a3a; }
+  .law-card.national-law::before { background: var(--accent); }
+
+  .law-card .law-title-th {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+    font-size: 13.5px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.45;
+  }
+  .law-card .law-desc-th {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.65;
+    font-weight: 300;
+  }
+  .law-card .law-refs {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .law-footnote {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.6;
+    padding: 12px 14px;
+    margin-top: 4px;
+    margin-bottom: 18px;
+    background: var(--bg-card);
+    border-left: 2px solid var(--line-2);
+  }
+  .law-footnote a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent);
+    transition: color .2s;
+  }
+  .law-footnote a:hover { color: var(--accent-2); border-bottom-color: var(--accent-2); }
+
+
+  /* ============================================
+     RESPONSIVE — TABLET & MOBILE
+     ============================================ */
+
+  /* TABLET (≤ 1024px) — panel แคบลง */
+  @media (max-width: 1024px) {
+    .layout {
+      grid-template-columns: 1fr 360px;
+    }
+    .info-panel { padding: 22px 20px; }
+    header { padding: 18px 24px; }
+    .hero-strip { padding: 22px 24px 14px; }
+    .hero-title { font-size: 42px; }
+    nav.top { gap: 24px; }
+  }
+
+  /* MOBILE (≤ 768px) — เปลี่ยนเป็นแนวตั้ง */
+  @media (max-width: 768px) {
+    /* Header: ซ่อน nav, จัด brand + status เป็นแถวเดียว */
+    header {
+      grid-template-columns: 1fr auto;
+      padding: 14px 16px;
+      gap: 8px;
+    }
+    nav.top { display: none; }
+    .brand { gap: 8px; flex-wrap: wrap; }
+    .brand .glyph { font-size: 24px; }
+    .brand .thai { font-size: 9px; letter-spacing: 0.15em; }
+    .header-right { gap: 10px; font-size: 9px; }
+    .header-right span:last-child { display: none; } /* ซ่อน version */
+
+    /* Hero: เล็กลง */
+    .hero-strip {
+      grid-template-columns: 1fr;
+      padding: 16px 16px 12px;
+      gap: 10px;
+    }
+    .hero-title { font-size: 30px; }
+    .hero-meta { text-align: left; font-size: 10px; }
+
+    /* Layout: เปลี่ยนเป็นแนวตั้ง (แผนที่บน, panel ล่าง) */
+    .layout {
+      display: flex;
+      flex-direction: column;
+      min-height: auto;
+    }
+    .map-shell {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+    .map-frame { padding: 12px; }
+    .map-canvas {
+      min-height: 60vh;
+      height: 60vh;
+    }
+    .map-bar {
+      font-size: 8.5px;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .map-bar div:last-child { display: none; } /* ซ่อน source บนมือถือ */
+
+    /* Info panel: เต็มความกว้าง ไม่จำกัดความสูง */
+    .info-panel {
+      max-height: none;
+      padding: 20px 16px;
+    }
+
+    /* Map controls: เล็กลง ใกล้ขอบ */
+    .layers {
+      top: 14px; left: 14px;
+      padding: 8px 10px;
+      min-width: 130px;
+      font-size: 8.5px;
+    }
+    .layers .head { font-size: 8px; margin-bottom: 5px; }
+    .layers label { padding: 2px 0; gap: 5px; }
+    .layers .key { width: 8px; height: 8px; }
+
+    .search-box {
+      top: auto; bottom: 14px;
+      width: calc(100% - 28px);
+      left: 14px;
+      transform: none;
+      padding: 8px 12px;
+    }
+    .search-box input { font-size: 14px; } /* 14px กันมือถือ zoom auto */
+
+    .zoom { top: 14px; right: 14px; }
+    .zoom button { width: 38px; height: 38px; font-size: 18px; } /* นิ้วแตะง่าย */
+
+    .compass { width: 48px; height: 48px; bottom: 64px; left: 14px; }
+    .compass .needle { height: 20px; }
+    .scale { bottom: 66px; right: 14px; font-size: 9px; }
+
+    .back-btn {
+      top: 14px;
+      font-size: 10px;
+      padding: 8px 14px;
+    }
+
+    /* Tooltip: ปรับให้ไม่ล้นจอ */
+    .tooltip { max-width: 80vw; }
+
+    /* Panel content: ปรับ grid ต่างๆ ให้พอดีจอแคบ */
+    .district-name { font-size: 30px; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .demo-row { grid-template-columns: repeat(2, 1fr); }
+    .perms-grid { grid-template-columns: 1fr; }
+    .law-zone-grid { grid-template-columns: 1fr; }
+    .law-zone-item.full { grid-column: auto; }
+
+    /* Sub-list: แตะง่ายขึ้น */
+    .sub-list-item { padding: 14px; }
+
+    /* Actions: เรียงต่อกัน */
+    .actions { flex-wrap: wrap; }
+    .actions .btn { flex: 1 1 100%; padding: 13px; }
+
+    /* Footer: ย่อ */
+    footer {
+      flex-direction: column;
+      gap: 8px;
+      padding: 14px 16px;
+      font-size: 8.5px;
+      text-align: center;
+    }
+    footer .legend { justify-content: center; }
+  }
+
+  /* MOBILE เล็กมาก (≤ 400px) */
+  @media (max-width: 400px) {
+    .hero-title { font-size: 25px; }
+    .district-name { font-size: 26px; }
+    .stat-row { grid-template-columns: 1fr; }
+    .demo-row { grid-template-columns: 1fr 1fr; }
+    .brand .thai { display: none; }
+  }
+
+  /* รองรับการแตะ: ขยาย hit area บนอุปกรณ์สัมผัส */
+  @media (hover: none) and (pointer: coarse) {
+    .district, .subdistrict { cursor: default; }
+    .sub-list-item, .btn, .zoom button { -webkit-tap-highlight-color: rgba(184,134,11,0.2); }
+  }
+
+
+  /* === DEMO CARD CLICKABLE === */
+  .demo-clickable {
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .demo-clickable:hover {
+    border-color: var(--accent);
+    background: rgba(184,134,11,0.07);
+    transform: translateY(-1px);
+  }
+  .demo-tap {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 8.5px;
+    color: var(--accent);
+    margin-top: 5px;
+    opacity: 0;
+    transition: opacity .2s;
+    letter-spacing: 0.02em;
+  }
+  .demo-clickable:hover .demo-tap { opacity: 1; }
+
+  /* === POI MODAL === */
+  .poi-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,42,38,0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+    padding: 20px;
+  }
+  .poi-modal.show { opacity: 1; pointer-events: auto; }
+  .poi-modal-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--line-2);
+    box-shadow: 0 20px 60px rgba(43,42,38,0.25);
+    width: 100%;
+    max-width: 460px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px) scale(0.97);
+    transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .poi-modal.show .poi-modal-card { transform: translateY(0) scale(1); }
+
+  .poi-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .poi-modal-title {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 21px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .poi-modal-title svg { color: var(--accent); flex-shrink: 0; }
+  .poi-modal-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  .poi-modal-close {
+    background: none;
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: all .2s;
+  }
+  .poi-modal-close:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .poi-modal-body {
+    overflow-y: auto;
+    padding: 18px 24px 24px;
+  }
+
+  .poi-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .poi-list { display: flex; flex-direction: column; gap: 4px; }
+  .poi-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    transition: all .15s;
+  }
+  .poi-item:hover { border-color: var(--line-2); background: var(--bg-soft); }
+  .poi-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    text-align: center;
+  }
+  .poi-info { min-width: 0; }
+  .poi-name-th {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .poi-name-en {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-top: 1px;
+  }
+  .poi-map-link {
+    text-decoration: none;
+    font-size: 15px;
+    opacity: 0.6;
+    transition: opacity .2s;
+  }
+  .poi-map-link:hover { opacity: 1; }
+
+  .poi-source {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 10.5px;
+    color: var(--ink-3);
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* Loading */
+  .poi-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 50px 20px;
+    color: var(--ink-2);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+  }
+  .poi-spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: poiSpin 0.8s linear infinite;
+  }
+  @keyframes poiSpin { to { transform: rotate(360deg); } }
+
+  .poi-empty, .poi-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-2);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .poi-empty span, .poi-error span {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .poi-error-icon {
+    font-size: 32px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .poi-retry {
+    display: block;
+    margin: 18px auto 0;
+    padding: 10px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .poi-retry:hover { background: var(--accent-2); }
+
+  /* Mobile modal */
+  @media (max-width: 768px) {
+    .poi-modal { padding: 0; align-items: flex-end; }
+    .poi-modal-card {
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 0;
+    }
+    .poi-modal.show .poi-modal-card { transform: translateY(0); }
+    .poi-modal-card { transform: translateY(100%); }
+  }
+
+
+  .tambon-detail-btn {
+    width: 100%; display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; border: none; border-radius: 4px;
+    padding: 16px 20px; margin: 4px 0 18px; cursor: pointer; text-align: left;
+    transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 0 6px 20px -8px rgba(184,134,11,0.5); font-family: inherit;
+  }
+  .tambon-detail-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -8px rgba(184,134,11,0.65); }
+  .tdb-icon { font-size: 24px; flex-shrink: 0; }
+  .tdb-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .tdb-title { font-size: 15px; font-weight: 700; }
+  .tdb-sub { font-size: 10.5px; opacity: 0.85; line-height: 1.4; }
+  .tdb-arrow { font-size: 20px; flex-shrink: 0; transition: transform 0.25s; }
+  .tambon-detail-btn:hover .tdb-arrow { transform: translateX(5px); }
+
+
+  /* === DARK MODE === */
+  body.dark {
+    --bg-deep:#14161c; --bg-mid:#1b1e26; --bg-soft:#20242e; --bg-card:#262b37;
+    --line:#333a47; --line-2:#454d5c; --ink:#e8e6e0; --ink-2:#a8a89e; --ink-3:#6f6f68;
+    --accent:#e0b34a; --accent-2:#f0c560; --district:#2c313d; --district-hi:#3a4150;
+  }
+  body.dark .map-canvas, body.dark .map-frame { background: var(--bg-mid); }
+  body, .map-canvas, .info-panel, header, .hero-strip, .panel { transition: background-color .5s ease, color .5s ease; }
+  .theme-toggle {
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--line-2);
+    background:var(--bg-card); color:var(--accent); cursor:pointer; font-size:15px;
+    display:flex; align-items:center; justify-content:center; transition:all .2s ease; flex-shrink:0; margin-left:14px;
+  }
+  .theme-toggle:hover { border-color:var(--accent); transform:scale(1.08); }
+
+  /* === COLLAPSIBLE SECTIONS === */
+  .section-title.collapsible,
+  .law-subhead.collapsible {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .section-title.collapsible:hover { color: var(--accent-2); }
+  .law-subhead.collapsible:hover { color: var(--accent); }
+  .collapse-chevron {
+    font-size: 10px;
+    color: var(--accent);
+    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+    flex-shrink: 0;
+    margin-right: 8px;
+    order: -1;            /* ดันไปหน้าสุด */
+  }
+  .section-title.collapsible { justify-content: flex-start; }
+  .law-subhead.collapsible { justify-content: flex-start; }
+  .collapsed > .collapse-chevron { transform: rotate(-90deg); }
+  /* law-subhead = หัวข้อย่อย สีดำ bold (chevron สีทอง) */
+  .law-subhead.collapsible .law-count { color: var(--ink-3); font-weight: 400; }
+
+  .collapse-body {
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease, margin 0.3s ease;
+    max-height: 4000px;
+    opacity: 1;
+  }
+  .collapse-body.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    pointer-events: none;
+  }
+
+
+  /* === ตราประจำจังหวัด (watermark เฟดซ้าย) === */
+  .hero-strip { position: relative; overflow: hidden; }
+  .hero-strip > * { position: relative; z-index: 1; }
+
+
+  /* === ตราใน panel (อำเภอ/ตำบล) เฟดซ้าย === */
+  .panel-header { position: relative; overflow: hidden; }
+  .panel-header > * { position: relative; z-index: 1; }
+  .panel-header::after {
+    content: ""; position: absolute; right: -18px; top: 50%;
+    transform: translateY(-50%);
+    width: 120px; height: 120px;
+    background-image: url('logo_nonthaburi.png'); background-repeat: no-repeat; background-position: center; background-size: contain;
+    opacity: 0.6; pointer-events: none; z-index: 0;
+  }
+  body.dark .panel-header::after { opacity: 0.4; }
+
+
+  .hero-seal-img {
+    width: 110px; height: 110px; min-width: 110px; flex-shrink: 0;
+    background-image: url('logo_nonthaburi.png'); background-repeat: no-repeat; background-position: center; background-size: contain;
+    opacity: 0.85; align-self: center;
+  }
+  body.dark .hero-seal-img { opacity: 0.6; }
+  @media (max-width: 720px) { .hero-seal-img { width: 70px; height: 70px; } }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="glyph" style="cursor:pointer" onclick="window.location.href='home.html'" title="กลับไปเลือกจังหวัด">ThaiGeo<i>lab</i></div>
+    <div class="thai">นนทบุรี · Atlas 2569</div>
+  </div>
+  <nav class="top">
+    <a href="#" class="active">Districts</a>
+    <a href="#">Zoning</a>
+    <a href="#">Census</a>
+    <a href="#">Land Code</a>
+    <a href="#">Archive</a>
+  </nav>
+  <div class="header-right">
+    <span><span class="live-dot"></span>LIVE · 13°51'N 100°31'E</span>
+    <span>v2.6.1</span>
+    <button class="theme-toggle" id="themeToggle" title="สลับโหมดกลางวัน/กลางคืน" aria-label="สลับธีม"><span class="theme-icon">☾</span></button>
+  </div>
+</header>
+
+<section class="hero-strip">
+  <div>
+    <div class="hero-title">เมืองปริมณฑล ริมเจ้าพระยา</div>
+  </div>
+  <div class="hero-seal-img"></div>
+  <div class="hero-meta">
+    <div>6 พื้นที่ (อำเภอ)</div>
+    <div><strong>640</strong> km² TOTAL AREA</div>
+    <div><strong>1,485,000</strong> ประชากร (ประมาณการ)</div>
+  </div>
+</section>
+
+<div class="layout">
+  <div class="map-shell">
+    <div class="map-frame">
+      <div class="map-bar">
+        <div class="crosshair">◉ REAL GEOMETRY · OPENGISDATA-THAILAND · EPSG:4326</div>
+        <div>SOURCE: OpenGISData-Thailand · Census 2024</div>
+      </div>
+      <div class="map-canvas" id="canvas">
+        <svg class="map" viewBox="0 0 1000 768" id="map" preserveAspectRatio="xMidYMid meet">
+          <g id="districts"></g>
+          <g id="labels"></g>
+          <g id="subdistricts"></g>
+          <g id="sub-labels"></g>
+          <g id="roads"></g>
+        </svg>
+
+        
+        <!-- Back button (hidden by default) -->
+        <button class="back-btn" id="backBtn">◂ BACK TO NONTHABURI</button>
+
+        <!-- Layer Toggle -->
+        <div class="layers">
+          <div class="head">DISPLAY MODE</div>
+          <label><input type="radio" name="mode" value="default" checked> <span class="key" style="background:#1c2433"></span> Default</label>
+          <label><input type="radio" name="mode" value="zone"> <span class="key" style="background:#d44a4a"></span> Zoning Color</label>
+          <label><input type="radio" name="mode" value="density"> <span class="key" style="background:#d4a017"></span> Pop. Density</label>
+          <label><input type="checkbox" id="showLabels" checked> District labels</label>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input id="search" type="text" placeholder="Search district (พระนคร, Sathon...)" autocomplete="off"/>
+        </div>
+
+        <!-- Compass -->
+        <div class="compass">
+          <div class="n">N</div><div class="e">E</div><div class="s">S</div><div class="w">W</div>
+          <div class="needle"></div>
+        </div>
+
+        <!-- Scale -->
+        <div class="scale">
+          0 ── 5 ── 10 KM
+          <div class="scale-bar"><span></span><span></span><span></span><span></span></div>
+        </div>
+
+        <!-- Zoom -->
+        <div class="zoom">
+          <button id="zin">+</button>
+          <button id="zout">−</button>
+          <button id="zreset">⊙</button>
+        </div>
+
+        <!-- Tooltip -->
+        <div class="tooltip" id="tooltip">
+          <div class="tt-name" id="tt-name"></div>
+          <div class="tt-thai" id="tt-thai"></div>
+          <div class="tt-meta" id="tt-meta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="info-panel" id="panel">
+    <div class="panel-empty" id="empty">
+      <div class="icon">⌖</div>
+      Select a district on the map<br>to read its dossier.
+      <div class="hint">50 districts · Real BMA data</div>
+    </div>
+    <div id="content" style="display:none;"></div>
+  </aside>
+</div>
+
+<footer>
+  <div>© ThaiGeolab · นนทบุรี (ข้อมูลตัวอย่าง) · OpenGISData-Thailand · โปรดตรวจสอบก่อนใช้งาน</div>
+  <div class="legend" id="legend">
+    <span><i style="background:#1c2433;border:1px solid #3a4658"></i>BUILT</span>
+    <span><i style="background:#0e2a3f"></i>WATER</span>
+    <span><i style="background:#1f3a2c"></i>PARK</span>
+  </div>
+</footer>
+
+<script>
+const DATA = {"province":"นนทบุรี","svg_w":1000,"svg_h":1184.4,"districts":[{"id":"bang-bua-thong","name_en":"Bang Bua Thong","name_th":"บางบัวทอง","dcode":"1204","area_km2":120.69,"pop":280000,"male":133000,"female":147000,"density":2320,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M607.0,829.1L602.5,909.3L572.0,896.1L541.1,924.0L519.8,909.9L503.9,874.4L446.9,849.1L421.8,811.9L389.3,807.2L365.7,766.6L354.6,769.7L334.9,863.3L323.7,871.4L267.7,856.6L235.5,732.6L261.1,708.4L316.0,640.4L295.5,626.6L311.9,598.7L314.8,549.9L297.9,490.5L316.4,477.1L342.3,505.7L407.1,516.4L392.7,494.1L488.2,519.9L612.7,645.4L589.8,685.9L581.6,735.7L596.1,738.5L576.3,804.8L604.0,810.7L607.0,829.1Z","cx":435.2,"cy":701.3,"zones":["Y4"],"primary_zone":"Y4","primary_color":"#e8b96a","land":[{"n":"ที่อยู่อาศัย (Residential)","v":48,"code":"Y2"},{"n":"เกษตรกรรม (Agriculture)","v":30,"code":"G2"},{"n":"พาณิชยกรรม (Commercial)","v":14,"code":"R2"},{"n":"อื่นๆ (Other)","v":8,"code":"W"}],"far":"FAR 1.5-3 (ตามผังเมืองรวม 2566)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]},{"id":"sai-noi","name_en":"Sai Noi","name_th":"ไทรน้อย","dcode":"1205","area_km2":204.27,"pop":92000,"male":43700,"female":48300,"density":450,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M235.5,732.6L267.7,856.6L208.0,851.0L207.1,877.3L196.7,879.0L144.1,871.1L127.6,900.9L59.7,756.1L26.1,733.6L58.0,688.4L132.5,597.1L60.8,538.1L20.0,482.3L34.2,470.8L22.7,464.1L50.2,383.4L63.9,405.4L35.1,330.9L26.0,281.3L48.6,259.8L67.2,146.0L75.4,67.7L129.6,20.0L165.4,33.7L245.0,57.3L277.6,99.4L238.8,292.1L316.4,477.1L297.9,490.5L314.8,549.9L311.9,598.7L295.5,626.6L316.0,640.4L261.1,708.4L235.5,732.6Z","cx":167.3,"cy":451.5,"zones":["G2"],"primary_zone":"G2","primary_color":"#bcd9a0","land":[{"n":"เกษตรกรรม (Agriculture)","v":62,"code":"G2"},{"n":"ที่อยู่อาศัย (Residential)","v":25,"code":"Y2"},{"n":"พาณิชยกรรม (Commercial)","v":7,"code":"R2"},{"n":"อื่นๆ (Other)","v":6,"code":"W"}],"far":"FAR 1-2 (ชนบท/เกษตร)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]},{"id":"bang-kruai","name_en":"Bang Kruai","name_th":"บางกรวย","dcode":"1202","area_km2":53.37,"pop":148000,"male":70300,"female":77700,"density":2773,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M748.6,1133.5L660.5,1164.4L658.9,1162.1L671.6,1145.6L654.6,1137.0L479.6,1122.1L226.2,1114.1L198.5,1054.2L227.2,1044.0L291.7,1049.9L294.5,1072.6L350.9,1077.7L447.5,1020.0L462.5,1049.4L529.8,1007.2L538.9,1016.7L575.3,1037.3L638.5,1031.0L664.3,1048.8L683.7,1025.0L707.8,1052.1L739.3,1096.6L774.5,1067.3L814.6,1084.0L748.6,1133.5Z","cx":519.2,"cy":1085.0,"zones":["Y2"],"primary_zone":"Y2","primary_color":"#e8d98a","land":[{"n":"ที่อยู่อาศัย (Residential)","v":48,"code":"Y2"},{"n":"เกษตรกรรม (Agriculture)","v":30,"code":"G2"},{"n":"พาณิชยกรรม (Commercial)","v":14,"code":"R2"},{"n":"อื่นๆ (Other)","v":8,"code":"W"}],"far":"FAR 1.5-3 (ตามผังเมืองรวม 2566)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]},{"id":"bang-yai","name_en":"Bang Yai","name_th":"บางใหญ่","dcode":"1203","area_km2":93.09,"pop":205000,"male":97375,"female":107625,"density":2202,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M529.8,1007.2L462.5,1049.4L447.5,1020.0L350.9,1077.7L294.5,1072.6L291.7,1049.9L227.2,1044.0L198.5,1054.2L127.6,900.9L144.1,871.1L196.7,879.0L207.1,877.3L208.0,851.0L267.7,856.6L323.7,871.4L334.9,863.3L354.6,769.7L365.7,766.6L389.3,807.2L421.8,811.9L446.9,849.1L503.9,874.4L519.8,909.9L541.1,924.0L572.0,896.1L602.5,909.3L603.3,916.9L581.6,941.4L590.2,979.1L538.9,1016.7L529.8,1007.2Z","cx":356.0,"cy":944.9,"zones":["Y2"],"primary_zone":"Y2","primary_color":"#e8d98a","land":[{"n":"ที่อยู่อาศัย (Residential)","v":48,"code":"Y2"},{"n":"เกษตรกรรม (Agriculture)","v":30,"code":"G2"},{"n":"พาณิชยกรรม (Commercial)","v":14,"code":"R2"},{"n":"อื่นๆ (Other)","v":8,"code":"W"}],"far":"FAR 1.5-3 (ตามผังเมืองรวม 2566)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]},{"id":"mueang-nonthaburi","name_en":"Mueang Nonthaburi","name_th":"เมืองนนทบุรี","dcode":"1201","area_km2":75.41,"pop":357000,"male":169575,"female":187425,"density":4734,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M774.5,1067.3L739.3,1096.6L707.8,1052.1L683.7,1025.0L664.3,1048.8L638.5,1031.0L575.3,1037.3L538.9,1016.7L590.2,979.1L581.6,941.4L603.3,916.9L607.9,839.9L647.6,830.0L688.8,830.5L718.8,849.7L737.3,822.0L762.3,818.6L922.7,873.2L903.2,964.9L809.0,1046.1L794.4,1051.3L787.8,1058.3L789.5,1075.6L774.5,1067.3Z","cx":739.2,"cy":942.5,"zones":["Y7"],"primary_zone":"Y7","primary_color":"#d98a8a","land":[{"n":"ที่อยู่อาศัย (Residential)","v":58,"code":"Y4"},{"n":"พาณิชยกรรม (Commercial)","v":22,"code":"R2"},{"n":"เกษตรกรรม (Agriculture)","v":10,"code":"G2"},{"n":"อื่นๆ (Other)","v":10,"code":"W"}],"far":"FAR 3-5 (โซนเมือง/รถไฟฟ้า)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]},{"id":"pak-kret","name_en":"Pak Kret","name_th":"ปากเกร็ด","dcode":"1206","area_km2":93.47,"pop":403000,"male":191425,"female":211575,"density":4312,"no_temple":0,"no_sch":0,"no_hos":0,"no_health":0,"no_commu":0,"water":0,"path":"M980.0,635.0L922.7,873.2L762.3,818.6L737.3,822.0L718.8,849.7L688.8,830.5L647.6,830.0L607.9,839.9L604.0,810.7L576.3,804.8L596.1,738.5L581.6,735.7L589.8,685.9L612.7,645.4L488.2,519.9L562.1,539.2L621.5,584.4L638.5,569.0L656.3,569.7L732.3,654.8L770.9,681.7L797.8,658.6L842.6,660.2L875.5,648.8L893.0,620.0L946.0,639.2L980.0,635.0Z","cx":757.2,"cy":722.4,"zones":["Y4"],"primary_zone":"Y4","primary_color":"#e8b96a","land":[{"n":"ที่อยู่อาศัย (Residential)","v":58,"code":"Y4"},{"n":"พาณิชยกรรม (Commercial)","v":22,"code":"R2"},{"n":"เกษตรกรรม (Agriculture)","v":10,"code":"G2"},{"n":"อื่นๆ (Other)","v":10,"code":"W"}],"far":"FAR 3-5 (โซนเมือง/รถไฟฟ้า)","osr":"ไม่น้อยกว่า 30% (+ พื้นที่น้ำซึมผ่าน)","highlights":[]}]};
+// Bangkok Comprehensive Plan zone color palette (official approximations)
+const ZONE_COLORS = {
+  "Y1":"#FFF3B0","Y2":"#FCE57E","Y3":"#F4D03F","Y4":"#F1C40F",
+  "O":"#E89849",
+  "BR":"#A56B30","BR1":"#A56B30","BR2":"#8B5A2B","BR3":"#704820",
+  "R3":"#E66968","R4":"#D44A4A","R5":"#C03030","R6":"#A82020","R7":"#911818","R8":"#7A1010","R9":"#5C0808",
+  "W":"#3B5B8F","W1":"#3B5B8F","W2":"#4F73AC","W3":"#5485C2",
+  "P1":"#8B6BBF","P2":"#6B4FAA",
+  "G1":"#5DAB48","G2":"#7DB46C",
+  "K1":"#E8DCC4","K2":"#D4B89C","K3":"#C09870",
+  "E":"#9CA76E","GP":"#3F7A4D"
+};
+
+// === Render SVG ===
+const svgD = document.getElementById('districts');
+const svgL = document.getElementById('labels');
+
+DATA.districts.forEach(d => {
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', d.path);
+  p.setAttribute('class','district');
+  p.setAttribute('data-id', d.id);
+  p.setAttribute('data-zone', d.primary_zone || '');
+  p.setAttribute('data-density', d.density || 0);
+  svgD.appendChild(p);
+
+  // Label
+  const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x', d.cx);
+  t.setAttribute('y', d.cy);
+  t.setAttribute('class','district-label show');
+  t.textContent = d.name_en.toUpperCase();
+  svgL.appendChild(t);
+});
+
+// === Helpers ===
+function fmt(n){ return (n||0).toLocaleString('en-US'); }
+
+function render(id){
+  const d = DATA.districts.find(x => x.id === id);
+  if (!d) return;
+  const empty = document.getElementById('empty');
+  const panel = document.getElementById('content');
+  empty.style.display = 'none';
+  panel.style.display = 'block';
+
+  // Build land breakdown rows
+  const landRows = (d.land || []).map(l => `
+    <div class="land-item">
+      <span class="name">${l.n}<span class="code">[${l.code}]</span></span>
+      <span class="bar" style="--w:${l.v}%"></span>
+      <span class="pct">${l.v}%</span>
+    </div>
+  `).join('');
+
+  // Build zone chips
+  const zoneChips = (d.zones || []).map((z,i) =>
+    `<span class="zone-chip ${i===0?'primary':''}">${z}</span>`
+  ).join('');
+
+  // Highlights
+  const highlightsHtml = (d.highlights || []).map(h =>
+    `<span>${h}</span>`).join('');
+
+  // Demographics
+  const malePct = d.pop ? Math.round(d.male / d.pop * 100) : 0;
+  const femalePct = 100 - malePct;
+
+  panel.innerHTML = `
+    <div class="panel-header">
+      <div class="crumb">NONTHABURI <span class="sep">/</span> DISTRICT CODE ${d.dcode || '—'}</div>
+      <div class="district-name">${d.name_en.split(' ')[0]} <em>${d.name_en.split(' ').slice(1).join(' ') || ''}</em></div>
+      <div class="district-thai">อำเภอ${d.name_th}</div>
+      <div class="district-code">PRIMARY ZONE · ${d.primary_zone || 'MIXED'} · ${getZoneName(d.primary_zone)}</div>
+    </div>
+
+    <div class="zone-chips">${zoneChips}</div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="label">AREA</div>
+        <div class="value">${d.area_km2}<span class="unit">km²</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">DENSITY</div>
+        <div class="value">${fmt(d.density)}<span class="unit">/km²</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Kind of Land · ประเภทการใช้ที่ดิน</div>
+    <div class="land-grid">${landRows}</div>
+
+    ${buildLegalSection(d, 'district')}
+
+    <div class="section-title">Population · ประชากร</div>
+    <div class="pop-headline">${fmt(d.pop)} <em>res.</em></div>
+    <div class="pop-sub">REGISTERED · BMA CENSUS</div>
+
+    <div class="gender-bar">
+      <div class="male" style="width:${malePct}%"></div>
+      <div class="female" style="width:${femalePct}%"></div>
+    </div>
+    <div class="gender-info">
+      <span>♂ MALE · <strong>${fmt(d.male)}</strong> (${malePct}%)</span>
+      <span>♀ FEMALE · <strong>${fmt(d.female)}</strong> (${femalePct}%)</span>
+    </div>
+
+    <div class="demo-row">
+      <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','temple','${d.name_en}')">
+        <div class="num">${d.no_temple||0}</div><div class="lbl">Temples</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','school','${d.name_en}')">
+        <div class="num">${d.no_sch||0}</div><div class="lbl">Schools</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','hospital','${d.name_en}')">
+        <div class="num">${(d.no_hos||0)+(d.no_health||0)}</div><div class="lbl">Health</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${d.dcode}','community','${d.name_en}')">
+        <div class="num">${d.no_commu||0}</div><div class="lbl">Communities</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+    </div>
+
+    ${highlightsHtml ? `
+      <div class="section-title">Notable Places · สถานที่สำคัญ</div>
+      <div class="highlights"><div class="h-list">${highlightsHtml}</div></div>
+    ` : ''}
+
+    ${buildPermissionsBar(d.primary_zone)}
+
+    <div class="actions">
+      <button class="btn" onclick="window.print()">Export</button>
+      <button class="btn">Compare</button>
+      <button class="btn primary">Sub-zones →</button>
+    </div>
+  `;
+
+  // Animate bars
+  setTimeout(() => {
+    panel.querySelectorAll('.land-item .bar').forEach(b => {
+      const w = b.style.getPropertyValue('--w');
+      b.style.setProperty('--w', '0%');
+      requestAnimationFrame(() => requestAnimationFrame(() =>
+        b.style.setProperty('--w', w)));
+    });
+  }, 30);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
+}
+
+function getZoneName(z) {
+  const names = {
+    "Y1":"Low-density Residential (สีเหลือง)",
+    "Y2":"Low-density Residential",
+    "Y3":"Low-density Residential",
+    "Y4":"Low-density Residential",
+    "O":"Medium-density Residential (สีส้ม)",
+    "BR":"High-density Residential (สีน้ำตาล)",
+    "BR1":"High-density Residential",
+    "BR2":"High-density Residential",
+    "BR3":"High-density Residential",
+    "R3":"Commercial · พาณิชยกรรม",
+    "R4":"Commercial",
+    "R5":"Commercial",
+    "R6":"Commercial Mid-density",
+    "R7":"Commercial High-density",
+    "R8":"Commercial Premium",
+    "R9":"Commercial CBD",
+    "W1":"Government / Institution (สีน้ำเงิน)",
+    "W2":"Educational / Health Institution",
+    "W3":"Public Utility / Transport",
+    "P1":"Light Industrial (สีม่วงอ่อน)",
+    "P2":"Industrial (สีม่วง)",
+    "G1":"Agricultural Conservation (สีเขียวลาย)",
+    "G2":"Agricultural (สีเขียว)",
+    "K1":"Cultural Conservation · Rattanakosin",
+    "K2":"Cultural Conservation",
+    "K3":"Heritage Overlay"
+  };
+  return names[z] || 'Mixed-use';
+}
+
+// === Tooltip ===
+const tt = document.getElementById('tooltip');
+const ttName = document.getElementById('tt-name');
+const ttThai = document.getElementById('tt-thai');
+const ttMeta = document.getElementById('tt-meta');
+const canvas = document.getElementById('canvas');
+
+document.querySelectorAll('.district').forEach(el => {
+  const d = DATA.districts.find(x => x.id === el.dataset.id);
+
+  el.addEventListener('mouseenter', () => {
+    ttName.textContent = d.name_en;
+    ttThai.textContent = `เขต${d.name_th}`;
+    ttMeta.innerHTML = `
+      <span class="tt-zone">▸ ${d.primary_zone || '—'} · ${getZoneName(d.primary_zone)}</span><br>
+      AREA · ${d.area_km2} km²<br>
+      POPULATION · ${fmt(d.pop)}<br>
+      DENSITY · ${fmt(d.density)} /km²
+    `;
+    tt.classList.add('show');
+  });
+
+  el.addEventListener('mousemove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    tt.style.left = Math.min(x + 14, r.width - 230) + 'px';
+    tt.style.top = (y + 14) + 'px';
+  });
+
+  el.addEventListener('mouseleave', () => tt.classList.remove('show'));
+});
+
+// === Display mode ===
+function applyMode(mode) {
+  document.querySelectorAll('.district').forEach(el => {
+    if (mode === 'zone') {
+      const z = el.dataset.zone;
+      el.style.fill = ZONE_COLORS[z] || 'var(--district)';
+    } else if (mode === 'density') {
+      const dn = +el.dataset.density;
+      // Density heatmap สำหรับพื้นขาว: ครีมอ่อน (ต่ำ) → ส้ม → แดงเข้ม (สูง)
+      // Max density ~ 22000/km², min ~ 600/km²
+      const t = Math.min(1, dn / 22000);
+      // ครีม #f0e6d0 (240,230,208) → แดงเข้ม #a02020 (160,32,32)
+      const r = Math.round(240 + (160 - 240) * t);
+      const g = Math.round(230 + (32 - 230) * t);
+      const b = Math.round(208 + (32 - 208) * t);
+      el.style.fill = `rgb(${r},${g},${b})`;
+    } else {
+      el.style.fill = '';
+    }
+  });
+}
+document.querySelectorAll('input[name="mode"]').forEach(r => {
+  r.addEventListener('change', () => applyMode(r.value));
+});
+
+// === Label toggle ===
+document.getElementById('showLabels').addEventListener('change', (e) => {
+  document.querySelectorAll('.district-label').forEach(t =>
+    t.classList.toggle('show', e.target.checked));
+});
+
+// === Zoom + Pan (รองรับ pinch-to-zoom บนมือถือ) ===
+let zoom = 1, panX = 0, panY = 0;
+const MIN_ZOOM = 0.6, MAX_ZOOM = 6;
+const map = document.getElementById('map');
+const mapCanvas = map.closest('.map-canvas') || map.parentElement;
+
+function applyTransform(animate) {
+  map.style.transition = animate ? 'transform .35s ease' : 'none';
+  map.style.transformOrigin = '0 0';
+  map.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+
+// ซูมโดยยึดจุด (cx, cy) เป็นศูนย์กลาง (พิกัดเทียบกับ map-canvas)
+function zoomAt(newZoom, cx, cy, animate) {
+  newZoom = Math.max(MIN_ZOOM, Math.min(newZoom, MAX_ZOOM));
+  // ปรับ pan เพื่อให้จุดใต้นิ้ว/เมาส์อยู่กับที่
+  const ratio = newZoom / zoom;
+  panX = cx - (cx - panX) * ratio;
+  panY = cy - (cy - panY) * ratio;
+  zoom = newZoom;
+  clampPan();
+  applyTransform(animate);
+}
+
+// กันไม่ให้ลากแผนที่ออกนอกกรอบมากเกินไป
+function clampPan() {
+  const rect = mapCanvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  // อนุญาตให้เลื่อนได้ในขอบเขตที่ภาพยังเห็น (เผื่อ margin 40%)
+  const maxX = w * 0.4 * zoom;
+  const maxY = h * 0.4 * zoom;
+  const minX = w - w * zoom - w * 0.4 * zoom;
+  const minY = h - h * zoom - h * 0.4 * zoom;
+  panX = Math.min(maxX, Math.max(minX, panX));
+  panY = Math.min(maxY, Math.max(minY, panY));
+}
+
+function centerPoint() {
+  const rect = mapCanvas.getBoundingClientRect();
+  return { x: rect.width / 2, y: rect.height / 2 };
+}
+
+// ปุ่ม +/-/reset
+document.getElementById('zin').onclick   = () => { const c = centerPoint(); zoomAt(zoom * 1.3, c.x, c.y, true); };
+document.getElementById('zout').onclick  = () => { const c = centerPoint(); zoomAt(zoom / 1.3, c.x, c.y, true); };
+document.getElementById('zreset').onclick= () => { zoom = 1; panX = 0; panY = 0; applyTransform(true); };
+
+// === Scroll wheel zoom (เดสก์ท็อป) ===
+mapCanvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = mapCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  zoomAt(zoom * factor, cx, cy, false);
+}, { passive: false });
+
+// === Mouse drag pan (เดสก์ท็อป) ===
+let isDragging = false, dragStartX = 0, dragStartY = 0, dragPanX = 0, dragPanY = 0, dragMoved = false;
+mapCanvas.addEventListener('mousedown', (e) => {
+  if (zoom <= 1) return;        // ลากเฉพาะตอนซูมเข้า
+  isDragging = true; dragMoved = false;
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  dragPanX = panX; dragPanY = panY;
+  mapCanvas.style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - dragStartX, dy = e.clientY - dragStartY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
+  panX = dragPanX + dx; panY = dragPanY + dy;
+  clampPan(); applyTransform(false);
+});
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  mapCanvas.style.cursor = '';
+});
+
+// === Touch: pinch-to-zoom + pan (มือถือ) ===
+let touchMode = null;   // 'pan' | 'pinch'
+let lastTouchX = 0, lastTouchY = 0, lastDist = 0, lastMidX = 0, lastMidY = 0;
+let pinchMoved = false;
+
+function touchDist(t1, t2) {
+  const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+  return Math.hypot(dx, dy);
+}
+
+mapCanvas.addEventListener('touchstart', (e) => {
+  const rect = mapCanvas.getBoundingClientRect();
+  if (e.touches.length === 2) {
+    touchMode = 'pinch';
+    pinchMoved = false;
+    lastDist = touchDist(e.touches[0], e.touches[1]);
+    lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+    lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+  } else if (e.touches.length === 1 && zoom > 1) {
+    touchMode = 'pan';
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  } else {
+    touchMode = null;
+  }
+}, { passive: false });
+
+mapCanvas.addEventListener('touchmove', (e) => {
+  const rect = mapCanvas.getBoundingClientRect();
+  if (touchMode === 'pinch' && e.touches.length === 2) {
+    e.preventDefault();
+    pinchMoved = true;
+    const dist = touchDist(e.touches[0], e.touches[1]);
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+    if (lastDist > 0) {
+      const factor = dist / lastDist;
+      zoomAt(zoom * factor, midX, midY, false);
+    }
+    // pan ตามการเลื่อนจุดกึ่งกลางสองนิ้ว
+    panX += (midX - lastMidX);
+    panY += (midY - lastMidY);
+    clampPan(); applyTransform(false);
+    lastDist = dist; lastMidX = midX; lastMidY = midY;
+  } else if (touchMode === 'pan' && e.touches.length === 1) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - lastTouchX;
+    const dy = e.touches[0].clientY - lastTouchY;
+    panX += dx; panY += dy;
+    clampPan(); applyTransform(false);
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  }
+}, { passive: false });
+
+mapCanvas.addEventListener('touchend', (e) => {
+  if (e.touches.length === 0) touchMode = null;
+  else if (e.touches.length === 1) {
+    // เปลี่ยนจาก pinch เป็น pan
+    touchMode = zoom > 1 ? 'pan' : null;
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  }
+});
+
+// === Double-tap zoom (มือถือ) ===
+let lastTap = 0;
+mapCanvas.addEventListener('touchend', (e) => {
+  if (e.changedTouches.length !== 1) return;
+  const now = Date.now();
+  if (now - lastTap < 300 && !pinchMoved) {
+    const rect = mapCanvas.getBoundingClientRect();
+    const cx = e.changedTouches[0].clientX - rect.left;
+    const cy = e.changedTouches[0].clientY - rect.top;
+    if (zoom > 1.5) { zoom = 1; panX = 0; panY = 0; applyTransform(true); }
+    else { zoomAt(2.2, cx, cy, true); }
+  }
+  lastTap = now;
+});
+
+// === Search ===
+document.getElementById('search').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll('.district').forEach(el => el.style.opacity = 1);
+    return;
+  }
+  DATA.districts.forEach(d => {
+    const match =
+      d.name_en.toLowerCase().includes(q) ||
+      d.name_th.includes(q) ||
+      (d.id || '').includes(q);
+    const el = document.querySelector(`[data-id="${d.id}"]`);
+    if (el) el.style.opacity = match ? 1 : 0.18;
+  });
+});
+
+
+
+// === PERMITTED USES PER ZONE ===
+// อ้างอิงผังเมืองรวมจังหวัดนนทบุรี (ข้อมูลตัวอย่าง)
+// 3 levels: 1=permitted, 2=conditional/with-limits, 3=restricted/prohibited
+const USE_CATEGORIES = [
+  { key: 'residential', en: 'Residential', th: 'ที่อยู่อาศัย', icon: 'M3 12 L12 4 L21 12 M5 10 V21 H19 V10' },
+  { key: 'condo',       en: 'Hi-rise Condo', th: 'คอนโดสูง',  icon: 'M5 21V3h6v18M13 21V8h6v13M7 7h2M7 11h2M7 15h2M15 12h2M15 16h2' },
+  { key: 'commercial',  en: 'Commercial', th: 'พาณิชยกรรม',   icon: 'M4 8h16l-1 13H5L4 8M9 8V4h6v4' },
+  { key: 'office',      en: 'Office Tower', th: 'อาคารสำนักงาน', icon: 'M4 21V3h16v18M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2' },
+  { key: 'hotel',       en: 'Hotel', th: 'โรงแรม',             icon: 'M3 21V9l9-5 9 5v12M8 21v-6h8v6M10 11h4' },
+  { key: 'hospital',    en: 'Hospital', th: 'โรงพยาบาล',       icon: 'M4 21V5h16v16M12 9v8M8 13h8' },
+  { key: 'clinic',      en: 'Clinic', th: 'คลินิก',            icon: 'M5 20V7h14v13M12 11v6M9 14h6' },
+  { key: 'school',      en: 'School', th: 'โรงเรียน',          icon: 'M2 10l10-5 10 5l-10 5L2 10M6 12v5c0 2 3 3 6 3s6-1 6-3v-5' },
+  { key: 'university',  en: 'University', th: 'มหาวิทยาลัย',   icon: 'M3 11l9-5 9 5-9 5-9-5M6 13v5l6 3 6-3v-5M21 11v6' },
+  { key: 'park',        en: 'Park', th: 'สวนสาธารณะ',          icon: 'M12 2v20M5 12c0-4 3-7 7-7s7 3 7 7M7 16c0-2 2-4 5-4s5 2 5 4' },
+  { key: 'museum',      en: 'Museum', th: 'พิพิธภัณฑ์',         icon: 'M3 21h18M5 21V10l7-5l7 5v11M9 13v5M12 13v5M15 13v5' },
+  { key: 'temple',      en: 'Temple', th: 'วัด',                icon: 'M12 3l6 5v3h-2v10H8V11H6V8l6-5M10 21V14h4v7' },
+  { key: 'restaurant',  en: 'Restaurant', th: 'ร้านอาหาร',     icon: 'M5 3v18M5 12h4M9 3v18M14 3v8a3 3 0 0 0 3 3v7' },
+  { key: 'retail',      en: 'Retail Shop', th: 'ร้านค้าปลีก',  icon: 'M3 8l2-4h14l2 4M3 8h18l-1 12H4L3 8M9 12v4M15 12v4' },
+  { key: 'market',      en: 'Market', th: 'ตลาด',               icon: 'M4 6h16v3H4M5 9v11h14V9M9 13h6' },
+  { key: 'factory',     en: 'Factory', th: 'โรงงาน',           icon: 'M3 21V11l5 3V11l5 3V11l5 3l1-8h-2V21' },
+  { key: 'warehouse',   en: 'Warehouse', th: 'คลังสินค้า',     icon: 'M3 9l9-5 9 5v12H3M7 21v-6h10v6M9 13h6' },
+  { key: 'gas-station', en: 'Gas Station', th: 'ปั๊มน้ำมัน',    icon: 'M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M5 11h8M15 9l3 2v8a2 2 0 0 1-2 2' },
+  { key: 'embassy',     en: 'Embassy', th: 'สถานทูต',           icon: 'M5 21V5l7-2 7 2v16M9 9h6M9 13h6M9 17h6' },
+  { key: 'govt',        en: 'Govt Office', th: 'หน่วยงานราชการ', icon: 'M4 21h16M5 21V9M19 21V9M9 21v-5M15 21v-5M3 9h18l-9-6z' },
+  { key: 'farm',        en: 'Farm / Agri', th: 'เกษตรกรรม',     icon: 'M3 21V11l5 4l4-6l4 8l5-4v8M3 21h18' },
+  { key: 'sports',      en: 'Sports Complex', th: 'สนามกีฬา',  icon: 'M3 12a9 9 0 1 0 18 0a9 9 0 0 0-18 0M3 12h18M12 3v18' },
+];
+
+// Permissions matrix: zone-code → {use-key: level}
+// 1 = permitted (green), 2 = conditional/limited (amber), 3 = restricted/prohibited (red)
+// Mapping based on official BMA ministerial regulations for each zone class
+const ZONE_PERMISSIONS = {
+  // === YELLOW: Low-density residential (Y1-Y4) ===
+  // Single homes, townhouses; small shops only; no hi-rise
+  'Y1': { residential:1, condo:3, commercial:2, office:3, hotel:3, hospital:3, clinic:1, school:1, university:3, park:1, museum:2, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:3, 'gas-station':2, embassy:3, govt:2, farm:1, sports:2 },
+  'Y2': { residential:1, condo:3, commercial:2, office:3, hotel:3, hospital:3, clinic:1, school:1, university:3, park:1, museum:2, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:3, 'gas-station':2, embassy:3, govt:2, farm:1, sports:2 },
+  'Y3': { residential:1, condo:3, commercial:2, office:2, hotel:2, hospital:2, clinic:1, school:1, university:2, park:1, museum:2, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:3, govt:1, farm:1, sports:1 },
+  'Y4': { residential:1, condo:2, commercial:1, office:2, hotel:2, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:2, govt:1, farm:2, sports:1 },
+
+  // === ORANGE: Medium-density residential (O) ===
+  // Townhouses, mid-rise apartments, small condos; commercial supports
+  'O':  { residential:1, condo:2, commercial:1, office:1, hotel:2, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:2, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+
+  // === BROWN: High-density residential (BR, BR1-BR3) ===
+  // Hi-rise condos, mixed-use; full commercial; no industry
+  'BR':  { residential:1, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'BR1': { residential:1, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'BR2': { residential:1, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'BR3': { residential:1, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+
+  // === RED: Commercial (R3-R9) ===
+  // Full commercial, hi-rise mixed-use; some residential
+  'R3': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:2, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R4': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:2, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R5': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R6': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R7': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R8': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'R9': { residential:2, condo:1, commercial:1, office:1, hotel:1, hospital:1, clinic:1, school:2, university:1, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+
+  // === BLUE/WHITE: Government & institution (W1-W3) ===
+  // Govt offices, hospitals, schools, utilities; limited commercial
+  'W':  { residential:2, condo:3, commercial:2, office:2, hotel:3, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:2, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'W1': { residential:2, condo:3, commercial:2, office:2, hotel:3, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:2, 'gas-station':1, embassy:1, govt:1, farm:3, sports:1 },
+  'W2': { residential:2, condo:2, commercial:2, office:2, hotel:2, hospital:1, clinic:1, school:1, university:1, park:1, museum:1, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:2, 'gas-station':1, embassy:2, govt:1, farm:3, sports:1 },
+  'W3': { residential:3, condo:3, commercial:2, office:2, hotel:3, hospital:2, clinic:2, school:3, university:3, park:2, museum:3, temple:3, restaurant:2, retail:2, market:2, factory:2, warehouse:1, 'gas-station':1, embassy:3, govt:1, farm:3, sports:2 },
+
+  // === PURPLE: Industrial (P1-P2) ===
+  // Factories, warehouses; restricted residential
+  'P1': { residential:2, condo:3, commercial:2, office:2, hotel:3, hospital:2, clinic:2, school:2, university:2, park:2, museum:3, temple:2, restaurant:2, retail:2, market:1, factory:1, warehouse:1, 'gas-station':1, embassy:3, govt:2, farm:2, sports:2 },
+  'P2': { residential:3, condo:3, commercial:2, office:2, hotel:3, hospital:3, clinic:2, school:3, university:3, park:2, museum:3, temple:3, restaurant:2, retail:2, market:2, factory:1, warehouse:1, 'gas-station':1, embassy:3, govt:2, farm:2, sports:3 },
+
+  // === GREEN: Agricultural (G1-G2) ===
+  // Farms; very limited residential and commercial
+  'G1': { residential:3, condo:3, commercial:3, office:3, hotel:3, hospital:3, clinic:2, school:2, university:3, park:1, museum:2, temple:2, restaurant:2, retail:2, market:2, factory:3, warehouse:3, 'gas-station':2, embassy:3, govt:2, farm:1, sports:2 },
+  'G2': { residential:2, condo:3, commercial:2, office:3, hotel:3, hospital:2, clinic:1, school:1, university:2, park:1, museum:1, temple:1, restaurant:2, retail:1, market:1, factory:3, warehouse:2, 'gas-station':1, embassy:3, govt:1, farm:1, sports:1 },
+
+  // === CULTURAL CONSERVATION (K1-K3) - Rattanakosin Island ===
+  // Strict: heritage preservation, height-capped, cultural uses only
+  'K1': { residential:2, condo:3, commercial:2, office:3, hotel:2, hospital:2, clinic:1, school:1, university:2, park:1, museum:1, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:3, 'gas-station':3, embassy:2, govt:1, farm:3, sports:3 },
+  'K2': { residential:2, condo:3, commercial:2, office:3, hotel:2, hospital:2, clinic:1, school:1, university:2, park:1, museum:1, temple:1, restaurant:2, retail:2, market:2, factory:3, warehouse:3, 'gas-station':3, embassy:2, govt:1, farm:3, sports:3 },
+  'K3': { residential:1, condo:2, commercial:1, office:2, hotel:1, hospital:1, clinic:1, school:1, university:2, park:1, museum:1, temple:1, restaurant:1, retail:1, market:1, factory:3, warehouse:3, 'gas-station':2, embassy:2, govt:1, farm:3, sports:2 },
+};
+
+function getPermissions(zoneCode) {
+  if (!zoneCode) return ZONE_PERMISSIONS['O']; // fallback to medium-density
+  return ZONE_PERMISSIONS[zoneCode] || ZONE_PERMISSIONS['O'];
+}
+
+function buildPermissionsBar(zoneCode) {
+  const perms = getPermissions(zoneCode);
+  // Sort: permitted (1) first, then conditional (2), then restricted (3)
+  const sorted = USE_CATEGORIES.map(u => ({...u, level: perms[u.key] || 2}))
+                               .sort((a, b) => a.level - b.level);
+
+  const counts = { 1: 0, 2: 0, 3: 0 };
+  sorted.forEach(u => counts[u.level]++);
+
+  return `
+    <div class="section-title"><span class="sec-star">★</span> What Can Be Built · สิ่งที่อนุญาตให้สร้าง</div>
+    <div class="perms-legend">
+      <span class="lg-item lg-1">● ${counts[1]} Permitted</span>
+      <span class="lg-item lg-2">◐ ${counts[2]} Conditional</span>
+      <span class="lg-item lg-3">○ ${counts[3]} Restricted</span>
+    </div>
+    <div class="perms-grid">
+      ${sorted.map(u => `
+        <div class="perm-tile lvl-${u.level}" title="${u.en} · ${u.th}">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="${u.icon}"/>
+          </svg>
+          <div class="perm-label">
+            <span class="perm-en">${u.en}</span>
+            <span class="perm-th">${u.th}</span>
+          </div>
+          <span class="perm-dot"></span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="perms-footnote">
+      อ้างอิงผังเมืองรวมจังหวัดนนทบุรี for zone <strong>${zoneCode || 'mixed'}</strong>. Subject to site-specific overlays, parcel size, FAR, and BMA building permit.
+    </div>
+  `;
+}
+
+
+// ============================================
+// ฐานข้อมูลกฎหมายอาคารและข้อบังคับ (ภาษาไทย)
+// ============================================
+
+// กฎหมายหลักระดับชาติที่ใช้บังคับทุกพื้นที่
+const LAW_NATIONAL = [
+  {
+    code: 'พ.ร.บ. ควบคุมอาคาร 2522',
+    title: 'พระราชบัญญัติควบคุมอาคาร พ.ศ. 2522',
+    body: 'กฎหมายหลักว่าด้วยการก่อสร้าง ดัดแปลง เคลื่อนย้าย รื้อถอน และการใช้อาคาร รวมถึงมาตรฐานความปลอดภัย โครงสร้าง และระบบประกอบอาคาร แก้ไขเพิ่มเติมโดยฉบับที่ 2 (พ.ศ. 2535), ฉบับที่ 3 (พ.ศ. 2543), ฉบับที่ 4 (พ.ศ. 2550) และฉบับที่ 5 (พ.ศ. 2558).',
+    refs: 'มาตรา 4, 21, 31, 39 ทวิ'
+  },
+  {
+    code: 'พ.ร.บ. การผังเมือง 2518',
+    title: 'พระราชบัญญัติการผังเมือง พ.ศ. 2518',
+    body: 'กฎหมายแม่บทกำหนดการวางผังเมืองรวม ผังเมืองเฉพาะ และการใช้ประโยชน์ที่ดิน บังคับให้ออกกฎกระทรวงเพื่อกำหนดบริเวณการใช้ประโยชน์ ปัจจุบันแก้ไขเพิ่มเติมโดย พ.ร.บ. การผังเมือง พ.ศ. 2562.',
+    refs: 'มาตรา 17, 27'
+  },
+  {
+    code: 'กฎกระทรวง ฉบับที่ 55 (2543)',
+    title: 'กฎกระทรวง ฉบับที่ 55 (พ.ศ. 2543) ออกตามความใน พ.ร.บ. ควบคุมอาคาร',
+    body: 'กำหนดลักษณะ แบบ รูปทรง สัดส่วน เนื้อที่ ที่ตั้งของอาคาร ระยะร่น และพื้นที่ว่างของอาคารทั่วไป รวมถึงกำหนดความกว้างถนนภายใน ที่จอดรถ และทางหนีไฟ. แก้ไขเพิ่มเติมโดยฉบับที่ 58 (2546), 61 (2550), 66 (2559) และ 68 (2563).',
+    refs: 'ข้อ 38, 41, 50'
+  },
+  {
+    code: 'พ.ร.บ. ควบคุมอาคาร 2522',
+    title: 'พระราชบัญญัติควบคุมอาคาร พ.ศ. 2522 (และฉบับแก้ไข)',
+    body: 'กำหนดมาตรฐานความมั่นคงแข็งแรง ระยะร่นจากแนวเขตที่ดินและถนนสาธารณะ ความสูงอาคาร และพื้นที่ว่าง บังคับใช้ผ่านเทศบาล/อบต. ในพื้นที่จังหวัดนนทบุรี.',
+    refs: 'ข้อ 50, 56, 67'
+  },
+  {
+    code: 'กฎกระทรวงผังเมืองรวมจังหวัดนนทบุรี',
+    title: 'ผังเมืองรวมจังหวัดนนทบุรี (กรมโยธาธิการและผังเมือง)',
+    body: 'กำหนดประเภทการใช้ประโยชน์ที่ดิน 10 ประเภทสี (เหลือง ส้ม น้ำตาล แดง ม่วง เขียว ฯลฯ) FAR สูงสุด และ OSR ขั้นต่ำของแต่ละบริเวณ. ปัจจุบันอยู่ระหว่างการปรับปรุงเป็นฉบับที่ 4 (คาดบังคับใช้ พ.ศ. 2568).',
+    refs: 'ข้อ 6–32'
+  }
+];
+
+// กฎหมายเฉพาะโซน (FAR, OSR, ระยะร่น, ความสูง)
+// ตามผังเมืองรวมจังหวัดนนทบุรี และกฎกระทรวงควบคุมอาคาร
+const ZONE_LAW = {
+  'Y1': {
+    name: 'ที่อยู่อาศัยหนาแน่นน้อย ระดับ 1 (สีเหลือง)',
+    far: '1.5 : 1',
+    osr: 'ไม่น้อยกว่า 50% ของแปลงที่ดิน',
+    height: 'อาคาร < 9 ม. (โดยปกติบ้านพักอาศัย 2 ชั้น)',
+    setback: 'ระยะร่น 2 ม. ทุกด้าน (บ้านพื้นที่ ≤ 300 ตร.ม.); 3 ม. ขึ้นไปกรณีมีช่องเปิด',
+    prohibited: 'ห้ามอาคารชุด/คอนโดเกิน 8 ยูนิตและสูง > 23 ม. ห้ามโรงงาน คลังสินค้า โรงแรม > 60 ห้อง'
+  },
+  'Y2': {
+    name: 'ที่อยู่อาศัยหนาแน่นน้อย ระดับ 2 (สีเหลือง)',
+    far: '2 : 1',
+    osr: 'ไม่น้อยกว่า 30%',
+    height: 'อาคาร < 12 ม. (3–4 ชั้น)',
+    setback: 'ระยะร่น 2–3 ม. ตามขนาดอาคาร; ระยะร่นจากถนน 2 ม.',
+    prohibited: 'ห้ามโรงงาน คลังสินค้าขนาดใหญ่ สถานบริการ'
+  },
+  'Y3': {
+    name: 'ที่อยู่อาศัยหนาแน่นน้อย ระดับ 3 (สีเหลือง)',
+    far: '2.5 : 1',
+    osr: 'ไม่น้อยกว่า 25%',
+    height: 'อาคาร ≤ 23 ม. (8 ชั้น)',
+    setback: 'ระยะร่น 3–4 ม. ตามความสูง',
+    prohibited: 'ห้ามโรงงานจำพวกที่ 3, ห้างสรรพสินค้า > 1,000 ตร.ม.'
+  },
+  'Y4': {
+    name: 'ที่อยู่อาศัยหนาแน่นน้อย ระดับ 4 (สีเหลือง)',
+    far: '3 : 1',
+    osr: 'ไม่น้อยกว่า 20%',
+    height: 'อาคาร ≤ 23 ม. (โดยปกติ 8 ชั้น)',
+    setback: 'ระยะร่น 3 ม. + ความสูง/10',
+    prohibited: 'ห้ามโรงงานจำพวกที่ 3, สถานบริการ'
+  },
+  'O': {
+    name: 'ที่อยู่อาศัยหนาแน่นปานกลาง (สีส้ม)',
+    far: '4 : 1',
+    osr: 'ไม่น้อยกว่า 15%',
+    height: 'อาคารใหญ่พิเศษ ≤ 60 ม. (กรณีถนน ≥ 16 ม.)',
+    setback: 'ระยะร่น 3 ม. + ความสูง/10; ระยะร่นจากถนน 6 ม. กรณีอาคารใหญ่',
+    prohibited: 'ห้ามโรงงานจำพวกที่ 3 ใกล้ที่อยู่อาศัย'
+  },
+  'BR': {
+    name: 'ที่อยู่อาศัยหนาแน่นมาก (สีน้ำตาล)',
+    far: '5 : 1',
+    osr: 'ไม่น้อยกว่า 10%',
+    height: 'ไม่จำกัด หากถนนสาธารณะ ≥ 18 ม.',
+    setback: 'ระยะร่น 6 ม. รอบอาคารใหญ่พิเศษ; ระยะร่นจากถนน 2/3 ของความสูง',
+    prohibited: 'ห้ามโรงงานทุกประเภท คลังสินค้าใหญ่'
+  },
+  'BR1': { name:'ที่อยู่อาศัยหนาแน่นมาก ระดับ 1 (สีน้ำตาล)', far:'5 : 1', osr:'ไม่น้อยกว่า 10%', height:'≤ 60 ม. (กรณีถนน 12–16 ม.)', setback:'ระยะร่น 6 ม. รอบอาคารใหญ่พิเศษ', prohibited:'ห้ามโรงงาน คลังสินค้าใหญ่' },
+  'BR2': { name:'ที่อยู่อาศัยหนาแน่นมาก ระดับ 2 (สีน้ำตาล)', far:'6 : 1', osr:'ไม่น้อยกว่า 8%',  height:'ไม่จำกัด หากถนน ≥ 16 ม.', setback:'ระยะร่น 6 ม. รอบอาคารใหญ่พิเศษ', prohibited:'ห้ามโรงงาน คลังสินค้าใหญ่' },
+  'BR3': { name:'ที่อยู่อาศัยหนาแน่นมาก ระดับ 3 (สีน้ำตาล)', far:'7 : 1', osr:'ไม่น้อยกว่า 6%',  height:'ไม่จำกัด หากถนน ≥ 18 ม.', setback:'ระยะร่น 6 ม. รอบอาคารใหญ่พิเศษ', prohibited:'ห้ามโรงงาน คลังสินค้าใหญ่' },
+  'R3': { name:'พาณิชยกรรม ระดับ 3 (สีแดง)', far:'4 : 1', osr:'ไม่น้อยกว่า 15%', height:'≤ 23 ม.', setback:'ระยะร่น 3 ม. + ความสูง/10', prohibited:'ห้ามโรงงาน คลังสินค้าวัตถุอันตราย' },
+  'R4': { name:'พาณิชยกรรม ระดับ 4 (สีแดง)', far:'5 : 1', osr:'ไม่น้อยกว่า 12%', height:'≤ 60 ม. (ถนน ≥ 16 ม.)', setback:'ระยะร่น 6 ม. รอบอาคารใหญ่พิเศษ', prohibited:'ห้ามโรงงานจำพวกที่ 3' },
+  'R5': { name:'พาณิชยกรรม ระดับ 5 (สีแดง)', far:'6 : 1', osr:'ไม่น้อยกว่า 10%', height:'ไม่จำกัด ถนน ≥ 16 ม.', setback:'ระยะร่น 6 ม.', prohibited:'ห้ามโรงงาน คลังสินค้าวัตถุอันตราย' },
+  'R6': { name:'พาณิชยกรรม ระดับ 6 (สีแดง)', far:'7 : 1', osr:'ไม่น้อยกว่า 8%',  height:'ไม่จำกัด ถนน ≥ 18 ม.', setback:'ระยะร่น 6 ม.', prohibited:'ห้ามโรงงาน คลังสินค้าใหญ่' },
+  'R7': { name:'พาณิชยกรรม ระดับ 7 (สีแดง)', far:'8 : 1', osr:'ไม่น้อยกว่า 6%',  height:'ไม่จำกัด ถนน ≥ 20 ม.', setback:'ระยะร่น 6 ม.', prohibited:'ห้ามโรงงาน คลังสินค้าใหญ่' },
+  'R8': { name:'พาณิชยกรรม ระดับ 8 (สีแดง)', far:'9 : 1', osr:'ไม่น้อยกว่า 5%',  height:'ไม่จำกัด',           setback:'ระยะร่น 6 ม.', prohibited:'ห้ามโรงงานทุกประเภท' },
+  'R9': { name:'พาณิชยกรรมศูนย์กลางเมือง (สีแดง)', far:'10 : 1 (โบนัส TOD +20%)', osr:'ไม่น้อยกว่า 5%', height:'ไม่จำกัด', setback:'ระยะร่น 6 ม.; ทางเดินสาธารณะภาคบังคับสำหรับ TOD', prohibited:'ห้ามโรงงานทุกประเภท' },
+  'W':  { name:'สถาบันราชการ/สาธารณูปโภค (สีน้ำเงิน)', far:'2 : 1', osr:'ไม่น้อยกว่า 20%', height:'ขึ้นอยู่กับลักษณะใช้งาน', setback:'ตามมาตรฐานเฉพาะของหน่วยงาน', prohibited:'ห้ามใช้เพื่อการค้าเป็นการประจำ' },
+  'W1': { name:'สถาบันราชการ ระดับ 1 (สีน้ำเงิน)', far:'2 : 1', osr:'ไม่น้อยกว่า 20%', height:'ตามระเบียบ', setback:'ตามมาตรฐานหน่วยงาน', prohibited:'ห้ามอาคารชุดเพื่อการค้า' },
+  'W2': { name:'สถาบันการศึกษา/การแพทย์ (สีน้ำเงิน)', far:'3 : 1', osr:'ไม่น้อยกว่า 15%', height:'≤ 60 ม.', setback:'ระยะร่น 6 ม. รอบอาคารใหญ่', prohibited:'ห้ามโรงงาน อบายมุข' },
+  'W3': { name:'สาธารณูปโภค/ขนส่ง (สีน้ำเงิน)', far:'ตามวัตถุประสงค์', osr:'ขึ้นอยู่กับโครงการ', height:'ตามสัญญาสัมปทาน', setback:'ตามมาตรฐานหน่วยงาน เช่น การท่าเรือ การรถไฟ', prohibited:'จำกัดการใช้เพื่ออยู่อาศัย' },
+  'P1': { name:'อุตสาหกรรมเบา (สีม่วงอ่อน)', far:'2 : 1', osr:'ไม่น้อยกว่า 15%', height:'≤ 23 ม.', setback:'ระยะร่น 6–10 ม. จากแนวเขต ตามจำพวกโรงงาน', prohibited:'ห้ามโรงงานจำพวกที่ 3 ใกล้ที่อยู่อาศัย' },
+  'P2': { name:'อุตสาหกรรม (สีม่วง)', far:'2 : 1', osr:'ไม่น้อยกว่า 10%', height:'≤ 23 ม.', setback:'ระยะร่น 10 ม. รอบโรงงานจำพวกที่ 3', prohibited:'ห้ามที่อยู่อาศัย โรงเรียน โรงพยาบาล' },
+  'G1': { name:'อนุรักษ์ชนบทและเกษตรกรรม (สีเขียวลายขาว)', far:'0.5 : 1', osr:'ไม่น้อยกว่า 70%', height:'< 9 ม.', setback:'ระยะร่น 6 ม. จากแนวเขต', prohibited:'ห้ามจัดสรรที่ดินเกิน 9 แปลง; ห้ามคอนโด; ห้ามโรงงาน' },
+  'G2': { name:'ชนบทและเกษตรกรรม (สีเขียว)', far:'0.5 : 1', osr:'ไม่น้อยกว่า 60%', height:'< 12 ม.', setback:'ระยะร่น 4–6 ม.', prohibited:'ห้ามคอนโด; ห้ามโรงงานจำพวกที่ 3' },
+  'K1': { name:'อนุรักษ์ศิลปวัฒนธรรมไทย (กรุงรัตนโกสินทร์ชั้นใน)', far:'3 : 1', osr:'ไม่น้อยกว่า 30%', height:'≤ 16 ม. (ลานพระบรมมหาราชวัง ≤ 12 ม.)', setback:'ห้ามสร้างใกล้พระบรมมหาราชวัง 200 ม.; ระเบียบสำนักนายกฯ 2546', prohibited:'ห้ามคอนโด ปั๊มน้ำมัน ห้างสรรพสินค้า อาคารตู้ ATM แบบลอย; ต้องผ่านกรมศิลปากร' },
+  'K2': { name:'อนุรักษ์ศิลปวัฒนธรรมไทย (กรุงรัตนโกสินทร์ชั้นนอก)', far:'4 : 1', osr:'ไม่น้อยกว่า 25%', height:'≤ 16 ม.', setback:'ระยะร่นจากแม่น้ำเจ้าพระยา 12 ม.; ระเบียบสำนักนายกฯ 2546', prohibited:'ห้างสรรพสินค้าใหญ่ คอนโดสูง โรงงาน' },
+  'K3': { name:'อนุรักษ์เพื่อส่งเสริมเอกลักษณ์ศิลปวัฒนธรรมไทย', far:'4 : 1', osr:'ไม่น้อยกว่า 20%', height:'≤ 23 ม.', setback:'ระยะร่น 6 ม.; ตรวจสอบเขตวัด/โบราณสถาน 200 ม.', prohibited:'อบายมุข ปั๊มน้ำมัน ใกล้ศาสนสถาน' }
+};
+
+// กฎหมายเฉพาะพื้นที่พิเศษ (ตามรหัสเขต)
+const SPECIAL_AREA_LAW = {
+  '1201': [ // เมืองนนทบุรี
+    {
+      code: 'ผังเมืองรวมนนทบุรี 2566',
+      title: 'ผังเมืองรวมนนทบุรี พ.ศ. 2566 (โซนเมือง/รถไฟฟ้า)',
+      body: 'ประกาศกระทรวงมหาดไทย 1 มี.ค. 2566 (ราชกิจจาฯ เล่ม 140 ตอนพิเศษ 48ง) ตาม พ.ร.บ.การผังเมือง 2562 แทนผังเดิมที่หมดอายุปี 2555. รอบศูนย์ราชการนนทบุรี (รถไฟฟ้า 3 สายพาดผ่าน) ปรับเป็นพื้นที่สีน้ำตาล (ที่อยู่อาศัยหนาแน่นมาก ย.7-ย.8) พัฒนาคอนโดได้มาก. ย่านพงษ์เพชรเป็นพื้นที่สีแดง ศูนย์กลางเศรษฐกิจจังหวัด. ใช้ FAR + OSR + พื้นที่น้ำซึมผ่าน และมาตรการ Bonus FAR รอบสถานีรถไฟฟ้า เช่นเดียวกับผังเมือง กทม.'
+    },
+    {
+      code: 'Bonus FAR รถไฟฟ้า',
+      title: 'มาตรการ Bonus FAR รอบสถานีขนส่งมวลชน',
+      body: 'อาคารใกล้สถานีรถไฟฟ้าได้ Bonus FAR เพิ่ม หากดำเนินการอย่างใดอย่างหนึ่ง: จัดพื้นที่โล่งสาธารณะ/สวนสาธารณะ, จัดที่จอดรถสาธารณะ, ร่นแนวอาคารจากเขตทางหลวงเป็นที่โล่งสาธารณะ, หรือจัดที่ว่างโดยรอบอาคารเพิ่มขึ้น. ตรวจสอบแปลงที่ดินได้ที่ urbangis.nont-pro.go.th'
+    }
+  ],
+  '1206': [ // ปากเกร็ด
+    {
+      code: 'เกาะเกร็ด · อนุรักษ์',
+      title: 'พื้นที่เกาะเกร็ด ต.เกาะเกร็ด · อนุรักษ์ชนบท/เกษตร',
+      body: 'เกาะเกร็ด (เกาะกลางแม่น้ำเจ้าพระยา ~4.2 ตร.กม./2,625 ไร่) เป็นที่ราบน้ำท่วมถึง ชุมชนมอญประวัติศาสตร์ตั้งแต่สมัยอยุธยา-ธนบุรี. มีวัดปรมัยยิกาวาส (เจดีย์เอียง) เป็นสัญลักษณ์. เหมาะอนุรักษ์ชนบท/เกษตรกรรม ควบคุมการก่อสร้างเข้มงวด รักษาวิถีชุมชนและทัศนียภาพริมน้ำ.'
+    },
+    {
+      code: 'เขตควบคุมอาคาร · เทศบาลนครปากเกร็ด',
+      title: 'ระยะร่นอาคารริมแม่น้ำ/ลำคลอง · เทศบาลนครปากเกร็ด',
+      body: 'เทศบาลนครปากเกร็ด (พื้นที่ 36 ตร.กม. 5 ตำบลฝั่งตะวันออกเจ้าพระยา) มีแผนที่กำหนดระยะร่นอาคารจากแม่น้ำ/ลำคลอง และระยะร่นจากถนนสายหลัก. อาคารแบ่ง 3 ประเภท: ก (พักอาศัย ≤2 ชั้น ≤150 ตร.ม.), ข (≤4 ชั้น), ค (≥4 ชั้น/อาคารสูง/ขนาดใหญ่พิเศษ ต้องขออนุญาตพิเศษ).'
+    }
+  ],
+  '1204': [ // บางบัวทอง
+    {
+      code: 'แนวรถไฟฟ้า/ราชพฤกษ์',
+      title: 'พื้นที่พัฒนาแนวรถไฟฟ้า · ราชพฤกษ์-ชัยพฤกษ์',
+      body: 'ผังเมือง 2566 ปรับโซนราชพฤกษ์-ชัยพฤกษ์จากที่อยู่อาศัยหนาแน่นน้อยเป็นหนาแน่นปานกลาง รองรับการอยู่อาศัยมากขึ้น. แนวถนนรัตนาธิเบศร์ตามรถไฟฟ้าเปลี่ยนเป็นสีน้ำตาล (หนาแน่นมาก) ให้คอนโดขึ้นได้. ฝั่งตะวันตกเตรียมเป็นศูนย์โลจิสติกส์เชื่อมกาญจนบุรี.'
+    }
+  ],
+};
+
+
+
+
+// Helper: รวมกฎหมายทุกระดับสำหรับอำเภอหรือตำบล
+function compileLaws(district, scope) {
+  const zone = district.primary_zone || 'O';
+  const zlaw = ZONE_LAW[zone] || ZONE_LAW['O'];
+  const special = SPECIAL_AREA_LAW[district.dcode] || [];
+  return { zone, zlaw, special };
+}
+
+function buildLegalSection(district, scope) {
+  const { zone, zlaw, special } = compileLaws(district, scope);
+  const scopeLabel = scope === 'sub' ? 'ระดับตำบล (สืบทอดจากอำเภอ)' : 'ระดับอำเภอ';
+
+  const specialHtml = special.length ? `
+    <div class="law-subhead">▸ กฎหมายเฉพาะพื้นที่ <span class="law-count">${special.length} ฉบับ</span></div>
+    ${special.map(l => `
+      <div class="law-card special-law">
+        <div class="law-code">${l.code}</div>
+        <div class="law-title-th">${l.title}</div>
+        <div class="law-desc-th">${l.body}</div>
+      </div>
+    `).join('')}
+  ` : '';
+
+  return `
+    <div class="section-title">กฎหมาย · Legal & Building Codes</div>
+
+    <div class="law-scope-tag">${scopeLabel} · โซน ${zone} · ${zlaw.name}</div>
+
+    <div class="law-subhead">▸ ข้อกำหนดเฉพาะโซน <span class="law-count">ผังเมืองรวมจังหวัดนนทบุรี</span></div>
+    <div class="law-zone-grid">
+      <div class="law-zone-item">
+        <span class="lz-label">อัตราส่วนพื้นที่อาคารต่อพื้นที่ดิน (FAR)</span>
+        <span class="lz-value">${zlaw.far}</span>
+      </div>
+      <div class="law-zone-item">
+        <span class="lz-label">อัตราส่วนพื้นที่ว่าง (OSR)</span>
+        <span class="lz-value">${zlaw.osr}</span>
+      </div>
+      <div class="law-zone-item">
+        <span class="lz-label">ความสูงอาคาร</span>
+        <span class="lz-value">${zlaw.height}</span>
+      </div>
+      <div class="law-zone-item">
+        <span class="lz-label">ระยะร่น (Setback)</span>
+        <span class="lz-value">${zlaw.setback}</span>
+      </div>
+      <div class="law-zone-item full">
+        <span class="lz-label">ข้อห้ามเฉพาะโซน</span>
+        <span class="lz-value lz-prohibit">${zlaw.prohibited}</span>
+      </div>
+    </div>
+
+    ${specialHtml}
+
+    <div class="law-subhead">▸ กฎหมายแม่บทระดับชาติ <span class="law-count">${LAW_NATIONAL.length} ฉบับ</span></div>
+    ${LAW_NATIONAL.map(l => `
+      <div class="law-card national-law">
+        <div class="law-code">${l.code}</div>
+        <div class="law-title-th">${l.title}</div>
+        <div class="law-desc-th">${l.body}</div>
+        ${l.refs ? `<div class="law-refs">อ้างอิง: ${l.refs}</div>` : ''}
+      </div>
+    `).join('')}
+
+    <div class="law-footnote">
+      เอกสารฉบับสมบูรณ์: <a href="https://asa.or.th/laws-and-regulations/cba/" target="_blank" rel="noopener">สมาคมสถาปนิกสยามฯ (ASA)</a>
+      · <a href="https://www.dpt.go.th" target="_blank" rel="noopener">กรมโยธาธิการและผังเมือง</a>
+      · กรมโยธาธิการและผังเมือง
+    </div>
+  `;
+}
+
+
+// === SUBS DATA ===
+const SUBS_DATA = {"subs":[{"sname_th":"สวนใหญ่","sname_en":"Suan Yai","dcode":"1201","scode":"120101","area_km2":4.65,"path":"M723.4,946.9L767.9,961.2L767.3,1014.0L789.7,1056.6L787.6,1059.2L789.3,1063.8L787.4,1071.8L789.5,1075.6L774.5,1067.3L737.9,997.9L702.3,950.7L697.2,934.0L716.5,932.9L723.4,946.9Z","cx":748.2,"cy":992.3,"pop_est":22017,"density_est":4735},{"sname_th":"ตลาดขวัญ","sname_en":"Talat Khwan","dcode":"1201","scode":"120102","area_km2":6.74,"path":"M850.5,940.4L851.7,978.8L783.0,998.6L782.4,1043.9L767.3,1014.0L767.9,961.2L723.4,946.9L716.5,932.9L850.5,940.4Z","cx":794.1,"cy":965.6,"pop_est":31912,"density_est":4735},{"sname_th":"บางเขน","sname_en":"Bang Khen","dcode":"1201","scode":"120103","area_km2":8.68,"path":"M903.1,965.0L809.0,1046.1L798.3,1048.6L797.9,1051.0L794.4,1051.3L789.7,1056.6L782.4,1043.9L783.0,998.6L851.7,978.8L850.5,940.4L880.5,921.0L880.0,906.2L921.0,889.6L903.1,965.0Z","cx":852.4,"cy":976.3,"pop_est":41098,"density_est":4735},{"sname_th":"บางกระสอ","sname_en":"Bang Kraso","dcode":"1201","scode":"120104","area_km2":11.17,"path":"M718.7,849.7L795.8,900.4L827.1,907.4L820.9,889.0L868.8,893.2L880.0,906.2L880.5,921.0L850.5,940.4L716.5,932.9L697.2,934.0L693.0,885.4L718.7,849.7Z","cx":774.5,"cy":907.0,"pop_est":52887,"density_est":4735},{"sname_th":"ท่าทราย","sname_en":"Tha Sai","dcode":"1201","scode":"120105","area_km2":11.12,"path":"M922.7,873.2L921.0,889.6L880.0,906.2L868.8,893.2L820.9,889.0L827.1,907.4L795.8,900.4L718.8,849.7L737.3,822.0L762.3,818.6L922.7,873.2Z","cx":815.1,"cy":864.6,"pop_est":52650,"density_est":4735},{"sname_th":"บางไผ่","sname_en":"Bang Phai","dcode":"1201","scode":"120106","area_km2":4.18,"path":"M774.5,1067.3L739.3,1096.6L707.8,1052.1L725.3,1000.7L737.9,997.9L774.5,1067.3Z","cx":738.9,"cy":1048.7,"pop_est":19791,"density_est":4735},{"sname_th":"บางศรีเมือง","sname_en":"Bang Si Mueang","dcode":"1201","scode":"120107","area_km2":5.98,"path":"M707.8,1052.1L683.7,1025.0L664.3,1048.8L638.5,1031.0L674.3,970.5L702.3,950.7L737.9,997.9L725.3,1000.7L707.8,1052.1Z","cx":689.1,"cy":1003.6,"pop_est":28314,"density_est":4735},{"sname_th":"บางกร่าง","sname_en":"Bang Krang","dcode":"1201","scode":"120108","area_km2":8.86,"path":"M670.0,971.4L674.3,970.5L638.5,1031.0L575.3,1037.3L538.9,1016.7L590.2,979.1L581.6,941.4L603.3,916.9L621.7,954.5L670.0,971.4Z","cx":609.0,"cy":990.8,"pop_est":41950,"density_est":4735},{"sname_th":"ไทรม้า","sname_en":"Sai Ma","dcode":"1201","scode":"120109","area_km2":7.17,"path":"M688.8,830.5L718.7,849.7L693.0,885.4L697.2,934.0L702.3,950.7L674.3,970.5L670.0,971.4L664.5,912.2L639.8,889.9L647.6,830.0L688.8,830.5Z","cx":676.0,"cy":886.5,"pop_est":33948,"density_est":4735},{"sname_th":"บางรักน้อย","sname_en":"Bang Rak Noi","dcode":"1201","scode":"120110","area_km2":6.85,"path":"M639.8,889.9L664.5,912.2L670.0,971.4L621.7,954.5L603.3,916.9L602.5,909.3L607.9,839.9L647.6,830.0L639.8,889.9Z","cx":633.1,"cy":904.0,"pop_est":32433,"density_est":4735},{"sname_th":"วัดชลอ","sname_en":"Wat Chalo","dcode":"1202","scode":"120201","area_km2":5.32,"path":"M714.9,1107.2L715.6,1145.2L660.5,1164.4L658.9,1162.1L671.6,1145.6L621.7,1117.1L676.4,1075.5L714.9,1107.2Z","cx":677.0,"cy":1119.2,"pop_est":14750,"density_est":2773},{"sname_th":"บางกรวย","sname_en":"Bang Kruai","dcode":"1202","scode":"120202","area_km2":4.0,"path":"M748.6,1133.5L715.6,1145.2L714.9,1107.2L739.3,1096.6L774.5,1067.3L789.5,1075.6L814.6,1084.0L748.6,1133.5Z","cx":757.0,"cy":1104.9,"pop_est":11090,"density_est":2772},{"sname_th":"บางสีทอง","sname_en":"Bang Si Thong","dcode":"1202","scode":"120203","area_km2":3.24,"path":"M707.8,1052.1L739.3,1096.6L714.9,1107.2L676.4,1075.5L664.3,1048.8L683.7,1025.0L707.8,1052.1Z","cx":698.8,"cy":1068.9,"pop_est":8983,"density_est":2773},{"sname_th":"บางขนุน","sname_en":"Bang Khanun","dcode":"1202","scode":"120204","area_km2":2.96,"path":"M676.4,1075.5L621.7,1117.1L601.0,1103.2L652.8,1041.3L664.3,1048.8L676.4,1075.5Z","cx":641.0,"cy":1080.6,"pop_est":8207,"density_est":2773},{"sname_th":"บางขุนกอง","sname_en":"Bang Khun Kong","dcode":"1202","scode":"120205","area_km2":6.42,"path":"M575.3,1037.3L638.5,1031.0L652.8,1041.3L601.0,1103.2L530.0,1069.6L550.3,1023.8L575.3,1037.3Z","cx":588.9,"cy":1060.1,"pop_est":17800,"density_est":2773},{"sname_th":"บางคูเวียง","sname_en":"Bang Khu Wiang","dcode":"1202","scode":"120206","area_km2":5.22,"path":"M530.0,1069.6L495.7,1111.0L462.5,1049.4L529.8,1007.2L538.9,1016.7L550.3,1023.8L530.0,1069.6Z","cx":507.0,"cy":1054.5,"pop_est":14473,"density_est":2773},{"sname_th":"มหาสวัสดิ์","sname_en":"Mahasawat","dcode":"1202","scode":"120207","area_km2":5.76,"path":"M654.6,1137.0L500.9,1123.6L495.7,1111.0L530.0,1069.6L601.0,1103.2L654.6,1137.0Z","cx":560.4,"cy":1109.1,"pop_est":15970,"density_est":2773},{"sname_th":"ปลายบาง","sname_en":"Plai Bang","dcode":"1202","scode":"120208","area_km2":4.35,"path":"M447.5,1020.0L500.9,1123.6L444.7,1120.6L431.1,1082.0L445.5,1061.1L427.6,1031.1L447.5,1020.0Z","cx":458.8,"cy":1082.3,"pop_est":12061,"density_est":2773},{"sname_th":"ศาลากลาง","sname_en":"Sala Klang","dcode":"1202","scode":"120209","area_km2":16.11,"path":"M431.1,1082.0L444.7,1120.6L226.2,1114.1L198.5,1054.2L227.2,1044.0L291.7,1049.9L294.5,1072.6L350.9,1077.7L427.6,1031.1L445.5,1061.1L431.1,1082.0Z","cx":326.9,"cy":1084.4,"pop_est":44666,"density_est":2773},{"sname_th":"บางม่วง","sname_en":"Bang Muang","dcode":"1203","scode":"120301","area_km2":11.57,"path":"M528.2,959.4L529.8,1007.2L462.5,1049.4L447.5,1020.0L350.9,1077.7L294.5,1072.6L291.7,1049.9L325.2,1034.2L399.2,1035.2L438.8,1011.7L435.0,971.9L502.5,960.6L528.2,959.4Z","cx":429.9,"cy":1019.0,"pop_est":25479,"density_est":2202},{"sname_th":"บางแม่นาง","sname_en":"Bang Mae Nang","dcode":"1203","scode":"120302","area_km2":22.75,"path":"M365.7,766.6L428.0,876.2L427.3,910.3L453.0,908.1L490.5,928.3L502.5,960.6L330.0,991.0L334.9,863.3L354.6,769.7L365.7,766.6Z","cx":391.6,"cy":904.2,"pop_est":50099,"density_est":2202},{"sname_th":"บางเลน","sname_en":"Bang Len","dcode":"1203","scode":"120303","area_km2":6.24,"path":"M581.6,941.4L590.2,979.1L538.9,1016.7L529.8,1007.2L528.2,959.4L541.1,924.0L572.0,896.1L602.5,909.3L603.3,916.9L581.6,941.4Z","cx":560.8,"cy":954.3,"pop_est":13742,"density_est":2202},{"sname_th":"เสาธงหิน","sname_en":"Sao Thong Hin","dcode":"1203","scode":"120304","area_km2":9.24,"path":"M421.8,811.9L446.9,849.1L503.9,874.4L519.8,909.9L541.1,924.0L528.2,959.4L502.5,960.6L490.5,928.3L453.0,908.1L427.3,910.3L428.0,876.2L389.3,807.2L421.8,811.9Z","cx":469.4,"cy":888.5,"pop_est":20348,"density_est":2202},{"sname_th":"บางใหญ่","sname_en":"Bang Yai","dcode":"1203","scode":"120305","area_km2":13.52,"path":"M399.2,1035.2L325.2,1034.2L291.7,1049.9L227.2,1044.0L198.5,1054.2L179.7,1014.2L330.0,991.0L435.0,971.9L438.8,1011.7L399.2,1035.2Z","cx":317.9,"cy":1015.6,"pop_est":29773,"density_est":2202},{"sname_th":"บ้านใหม่","sname_en":"Ban Mai","dcode":"1203","scode":"120306","area_km2":29.77,"path":"M267.7,856.6L323.7,871.4L334.9,863.3L330.0,991.0L179.7,1014.2L127.6,900.9L144.1,871.1L196.7,879.0L207.1,877.3L208.0,851.0L267.7,856.6Z","cx":238.9,"cy":930.8,"pop_est":65559,"density_est":2202},{"sname_th":"โสนลอย","sname_en":"Sano Loi","dcode":"1204","scode":"120401","area_km2":1.33,"path":"M499.4,772.3L502.0,739.7L530.6,739.4L541.6,771.3L499.4,772.3Z","cx":518.5,"cy":756.7,"pop_est":3086,"density_est":2320},{"sname_th":"บางบัวทอง","sname_en":"Bang Bua Thong","dcode":"1204","scode":"120402","area_km2":28.27,"path":"M530.6,739.4L502.0,739.7L502.0,747.9L445.4,727.1L295.5,626.6L311.9,598.7L314.8,549.9L297.9,490.5L315.5,478.2L332.1,515.6L381.4,540.9L467.1,661.4L546.6,708.5L530.6,739.4Z","cx":400.2,"cy":633.6,"pop_est":65586,"density_est":2320},{"sname_th":"บางรักใหญ่","sname_en":"Bang Rak Yai","dcode":"1204","scode":"120403","area_km2":5.26,"path":"M607.0,829.1L607.9,839.9L602.5,909.3L572.0,896.1L541.1,924.0L519.8,909.9L520.0,895.8L547.5,883.2L563.1,856.7L563.3,830.8L607.0,829.1Z","cx":572.2,"cy":875.7,"pop_est":12203,"density_est":2320},{"sname_th":"บางคูรัด","sname_en":"Bang Khu Rat","dcode":"1204","scode":"120404","area_km2":17.42,"path":"M364.4,723.7L365.7,766.6L354.6,769.7L334.9,863.3L323.7,871.4L267.7,856.6L235.5,732.6L261.1,708.4L364.4,723.7Z","cx":301.2,"cy":781.8,"pop_est":40414,"density_est":2320},{"sname_th":"ละหาร","sname_en":"Lahan","dcode":"1204","scode":"120405","area_km2":18.63,"path":"M407.1,516.4L444.5,528.1L481.8,594.1L589.8,685.9L581.6,735.7L536.5,725.7L546.6,708.5L467.1,661.4L381.4,540.9L332.1,515.6L315.5,478.2L316.4,477.1L342.3,505.7L407.1,516.4Z","cx":473.7,"cy":615.2,"pop_est":43221,"density_est":2320},{"sname_th":"ลำโพ","sname_en":"Lam Pho","dcode":"1204","scode":"120406","area_km2":13.01,"path":"M589.8,685.9L481.8,594.1L444.5,528.1L407.1,516.4L392.7,494.1L488.2,519.9L612.7,645.4L589.8,685.9Z","cx":518.6,"cy":588.5,"pop_est":30183,"density_est":2320},{"sname_th":"พิมลราช","sname_en":"Phimonrat","dcode":"1204","scode":"120407","area_km2":16.92,"path":"M445.4,727.1L502.0,747.9L499.4,772.3L541.6,771.3L530.6,739.4L536.5,725.7L596.1,738.5L576.3,804.8L543.1,779.0L480.5,781.8L414.1,762.3L414.4,741.8L364.4,723.7L261.1,708.4L298.6,664.9L316.0,640.4L445.4,727.1Z","cx":423.0,"cy":725.3,"pop_est":39254,"density_est":2320},{"sname_th":"บางรักพัฒนา","sname_en":"Bang Rak Phatthana","dcode":"1204","scode":"120408","area_km2":19.85,"path":"M414.4,741.8L414.1,762.3L480.5,781.8L543.1,779.0L576.3,804.8L604.0,810.7L607.0,829.1L563.3,830.8L563.1,856.7L547.5,883.2L520.0,895.8L519.8,909.9L503.9,874.4L446.9,849.1L421.8,811.9L389.3,807.2L365.7,766.6L364.4,723.7L414.4,741.8Z","cx":481.7,"cy":812.5,"pop_est":46052,"density_est":2320},{"sname_th":"ไทรน้อย","sname_en":"Sai Noi","dcode":"1205","scode":"120501","area_km2":23.07,"path":"M314.8,549.9L311.9,598.7L295.5,626.6L316.0,640.4L298.6,664.9L153.6,568.1L172.1,544.1L184.4,548.0L246.9,428.1L297.9,490.5L314.8,549.9Z","cx":251.7,"cy":552.3,"pop_est":10390,"density_est":450},{"sname_th":"ราษฎร์นิยม","sname_en":"Rat Niyom","dcode":"1205","scode":"120502","area_km2":33.58,"path":"M245.0,57.3L277.6,99.4L238.8,292.1L316.4,477.1L305.7,485.3L250.9,392.5L224.0,279.3L179.1,279.0L181.3,394.6L142.9,394.0L145.7,355.5L146.3,270.4L179.2,268.4L165.4,33.7L245.0,57.3Z","cx":215.5,"cy":216.3,"pop_est":15124,"density_est":450},{"sname_th":"หนองเพรางาย","sname_en":"Nong Phrao Ngai","dcode":"1205","scode":"120503","area_km2":31.72,"path":"M141.2,737.6L194.8,698.8L221.5,738.2L235.5,732.6L267.7,856.6L208.0,851.0L207.1,877.3L196.7,879.0L144.1,871.1L127.6,900.9L59.7,756.1L26.1,733.6L58.0,688.4L141.2,737.6Z","cx":154.9,"cy":788.7,"pop_est":14286,"density_est":450},{"sname_th":"ไทรใหญ่","sname_en":"Sai Yai","dcode":"1205","scode":"120504","area_km2":39.22,"path":"M179.2,268.4L146.3,270.4L145.7,355.5L35.1,330.9L26.0,281.3L48.6,259.8L67.2,146.0L75.4,67.7L129.6,20.0L165.4,33.7L179.2,268.4Z","cx":112.2,"cy":197.5,"pop_est":17664,"density_est":450},{"sname_th":"ขุนศรี","sname_en":"Khun Si","dcode":"1205","scode":"120505","area_km2":25.09,"path":"M145.7,355.5L142.9,394.0L108.6,501.9L172.1,544.1L132.5,597.1L60.8,538.1L20.0,482.3L34.2,470.8L22.7,464.1L50.2,383.4L63.9,405.4L35.1,330.9L145.7,355.5Z","cx":90.9,"cy":457.3,"pop_est":11300,"density_est":450},{"sname_th":"คลองขวาง","sname_en":"Khlong Khwang","dcode":"1205","scode":"120506","area_km2":26.0,"path":"M250.9,392.5L305.7,485.3L297.9,490.5L246.9,428.1L184.4,548.0L172.1,544.1L108.6,501.9L142.9,394.0L181.3,394.6L179.1,279.0L224.0,279.3L250.9,392.5Z","cx":193.8,"cy":423.1,"pop_est":11710,"density_est":450},{"sname_th":"ทวีวัฒนา","sname_en":"Thawi Watthana","dcode":"1205","scode":"120507","area_km2":25.59,"path":"M261.1,708.4L235.5,732.6L221.5,738.2L194.8,698.8L141.2,737.6L58.0,688.4L132.5,597.1L153.6,568.1L298.6,664.9L261.1,708.4Z","cx":176.3,"cy":663.5,"pop_est":11525,"density_est":450},{"sname_th":"ปากเกร็ด","sname_en":"Pak Kret","dcode":"1206","scode":"120601","area_km2":4.79,"path":"M860.5,788.7L738.5,781.0L739.5,755.8L765.2,719.8L792.5,736.0L803.2,762.5L856.1,772.5L860.5,788.7Z","cx":786.3,"cy":763.0,"pop_est":20648,"density_est":4311},{"sname_th":"บางตลาด","sname_en":"Bang Talat","dcode":"1206","scode":"120602","area_km2":12.07,"path":"M860.5,788.7L937.2,816.3L922.7,873.2L762.3,818.6L737.3,822.0L730.7,805.9L738.5,781.0L860.5,788.7Z","cx":842.2,"cy":818.8,"pop_est":52029,"density_est":4311},{"sname_th":"บ้านใหม่","sname_en":"Ban Mai","dcode":"1206","scode":"120603","area_km2":18.24,"path":"M946.0,639.2L980.0,635.0L945.6,782.0L869.7,774.7L845.3,719.0L853.3,683.3L842.6,660.2L875.5,648.8L893.0,620.0L946.0,639.2Z","cx":909.6,"cy":701.8,"pop_est":78626,"density_est":4311},{"sname_th":"บางพูด","sname_en":"Bang Phut","dcode":"1206","scode":"120604","area_km2":8.93,"path":"M845.3,719.0L869.7,774.7L803.2,762.5L792.5,736.0L765.2,719.8L770.9,681.7L797.8,658.6L842.6,660.2L853.3,683.3L845.3,719.0Z","cx":816.6,"cy":712.8,"pop_est":38494,"density_est":4311},{"sname_th":"บางตะไนย์","sname_en":"Bang Tanai","dcode":"1206","scode":"120605","area_km2":4.53,"path":"M770.9,681.7L765.2,719.8L739.5,755.8L700.4,662.9L732.3,654.8L770.9,681.7Z","cx":738.7,"cy":696.9,"pop_est":19527,"density_est":4311},{"sname_th":"คลองพระอุดม","sname_en":"Khlong Phra Udom","dcode":"1206","scode":"120606","area_km2":4.31,"path":"M687.1,744.1L659.8,686.8L700.4,662.9L739.5,755.8L687.1,744.1Z","cx":698.3,"cy":711.6,"pop_est":18579,"density_est":4311},{"sname_th":"ท่าอิฐ","sname_en":"Tha It","dcode":"1206","scode":"120607","area_km2":6.17,"path":"M663.9,773.5L684.7,795.1L730.7,805.9L737.3,822.0L718.8,849.7L688.8,830.5L647.6,830.0L607.9,839.9L604.0,810.7L663.9,773.5Z","cx":669.5,"cy":813.7,"pop_est":26597,"density_est":4311},{"sname_th":"เกาะเกร็ด","sname_en":"Ko Kret","dcode":"1206","scode":"120608","area_km2":4.06,"path":"M687.1,744.1L739.5,755.8L738.5,781.0L730.7,805.9L684.7,795.1L663.9,773.5L666.0,746.6L687.1,744.1Z","cx":703.0,"cy":772.6,"pop_est":17501,"density_est":4311},{"sname_th":"อ้อมเกร็ด","sname_en":"Om Kret","dcode":"1206","scode":"120609","area_km2":4.95,"path":"M666.0,746.6L663.9,773.5L604.0,810.7L576.3,804.8L596.1,738.5L666.0,746.6Z","cx":619.2,"cy":771.9,"pop_est":21338,"density_est":4311},{"sname_th":"คลองข่อย","sname_en":"Khlong Khoi","dcode":"1206","scode":"120610","area_km2":16.03,"path":"M621.5,584.4L638.5,569.0L656.3,569.7L732.3,654.8L700.4,662.9L659.8,686.8L622.4,670.2L612.7,645.4L488.2,519.9L562.1,539.2L621.5,584.4Z","cx":624.6,"cy":609.3,"pop_est":69099,"density_est":4311},{"sname_th":"บางพลับ","sname_en":"Bang Phlap","dcode":"1206","scode":"120611","area_km2":6.96,"path":"M687.1,744.1L666.0,746.6L581.6,735.7L589.8,685.9L612.7,645.4L622.4,670.2L659.8,686.8L687.1,744.1Z","cx":628.8,"cy":708.8,"pop_est":30002,"density_est":4311},{"sname_th":"คลองเกลือ","sname_en":"Khlong Kluea","dcode":"1206","scode":"120612","area_km2":2.45,"path":"M945.6,782.0L937.2,816.3L860.5,788.7L856.1,772.5L945.6,782.0Z","cx":905.5,"cy":790.9,"pop_est":10561,"density_est":4311}],"transforms":{"1204":{"x":181.9,"y":423.5,"w":484.5,"h":554.2},"1205":{"x":-85.7,"y":-85.7,"w":507.8,"h":1092.3},"1202":{"x":124.6,"y":933.3,"w":764.0,"h":305.1},"1203":{"x":70.5,"y":709.5,"w":589.9,"h":425.3},"1201":{"x":492.8,"y":772.5,"w":475.9,"h":370.1},"1206":{"x":429.2,"y":460.9,"w":609.8,"h":471.3}}};
+const SUBS_BY_DCODE = {};
+SUBS_DATA.subs.forEach(s => {
+  if (!SUBS_BY_DCODE[s.dcode]) SUBS_BY_DCODE[s.dcode] = [];
+  SUBS_BY_DCODE[s.dcode].push(s);
+});
+
+// State
+let viewLevel = 'city'; // 'city' or 'district'
+let currentDistrict = null;
+let currentSub = null;
+
+const svgRoot = document.getElementById('map');
+// Initialize the viewBox-aware scale variable
+const svgSubs = document.getElementById('subdistricts');
+const svgSubLabels = document.getElementById('sub-labels');
+const svgRoads = document.getElementById('roads');
+const backBtn = document.getElementById('backBtn');
+const searchBox = document.querySelector('.search-box');
+const ORIG_VIEWBOX = `0 0 ${DATA.svg_w} ${DATA.svg_h}`;
+document.getElementById('map').setAttribute('viewBox', ORIG_VIEWBOX);
+
+// Some notable streets/roads per major district (we don't have real road geometry — instead we'll
+// generate stylized road lines within the district bbox, and surface real street names in the panel)
+const ROADS_BY_DCODE = {
+  '1038': [ // Lat Phrao
+    { n: 'Lat Phrao Road', th: 'ถนนลาดพร้าว', type: 'arterial' },
+    { n: 'Ratchada-Lat Phrao', th: 'ถนนรัชดาภิเษก', type: 'arterial' },
+    { n: 'Soi Lat Phrao 71', th: 'ซอยลาดพร้าว 71', type: 'collector' },
+    { n: 'Pradiphat Rd.', th: 'ถนนประดิพัทธ์', type: 'collector' },
+    { n: 'Chok Chai 4', th: 'ซอยโชคชัย 4', type: 'collector' },
+  ],
+  '1001': [ // Phra Nakhon
+    { n: 'Ratchadamnoen Klang', th: 'ถนนราชดำเนินกลาง', type: 'arterial' },
+    { n: 'Charoen Krung Rd.', th: 'ถนนเจริญกรุง', type: 'arterial' },
+    { n: 'Maharat Rd.', th: 'ถนนมหาราช', type: 'collector' },
+    { n: 'Khao San Rd.', th: 'ถนนข้าวสาร', type: 'pedestrian' },
+    { n: 'Phra Athit Rd.', th: 'ถนนพระอาทิตย์', type: 'collector' },
+  ],
+  '1007': [ // Pathum Wan
+    { n: 'Rama I Road', th: 'ถนนพระราม 1', type: 'arterial' },
+    { n: 'Phloen Chit Rd.', th: 'ถนนเพลินจิต', type: 'arterial' },
+    { n: 'Witthayu Rd.', th: 'ถนนวิทยุ (Wireless)', type: 'arterial' },
+    { n: 'Henri Dunant Rd.', th: 'ถนนอังรีดูนังต์', type: 'collector' },
+    { n: 'Ratchadamri Rd.', th: 'ถนนราชดำริ', type: 'arterial' },
+  ],
+  '1004': [ // Bang Rak
+    { n: 'Silom Road', th: 'ถนนสีลม', type: 'arterial' },
+    { n: 'Surawong Rd.', th: 'ถนนสุรวงศ์', type: 'arterial' },
+    { n: 'Charoen Krung Rd.', th: 'ถนนเจริญกรุง', type: 'arterial' },
+    { n: 'Sathorn Nuea', th: 'ถนนสาทรเหนือ', type: 'arterial' },
+  ],
+  '1028': [ // Sathon
+    { n: 'Sathorn Tai Rd.', th: 'ถนนสาทรใต้', type: 'arterial' },
+    { n: 'Naradhiwas Rajanagarindra', th: 'ถนนนราธิวาสราชนครินทร์', type: 'arterial' },
+    { n: 'Rama III Rd.', th: 'ถนนพระราม 3', type: 'arterial' },
+    { n: 'Chan Rd.', th: 'ถนนจันทน์', type: 'collector' },
+  ],
+  '1039': [ // Vadhana
+    { n: 'Sukhumvit Road', th: 'ถนนสุขุมวิท', type: 'arterial' },
+    { n: 'Soi Thonglor (Sukhumvit 55)', th: 'ซอยทองหล่อ', type: 'collector' },
+    { n: 'Soi Ekkamai (Sukhumvit 63)', th: 'ซอยเอกมัย', type: 'collector' },
+    { n: 'Phetchaburi Rd.', th: 'ถนนเพชรบุรี', type: 'arterial' },
+    { n: 'Asok Montri Rd.', th: 'ถนนอโศกมนตรี', type: 'arterial' },
+  ],
+  '1033': [ // Khlong Toei
+    { n: 'Rama IV Road', th: 'ถนนพระราม 4', type: 'arterial' },
+    { n: 'Sunthorn Kosa Rd.', th: 'ถนนสุนทรโกษา', type: 'collector' },
+    { n: 'Ratchadaphisek Rd.', th: 'ถนนรัชดาภิเษก', type: 'arterial' },
+  ],
+  '1030': [ // Chatu Chak
+    { n: 'Phahon Yothin Rd.', th: 'ถนนพหลโยธิน', type: 'arterial' },
+    { n: 'Kamphaeng Phet Rd.', th: 'ถนนกำแพงเพชร', type: 'collector' },
+    { n: 'Vibhavadi Rangsit Rd.', th: 'ถนนวิภาวดีรังสิต', type: 'arterial' },
+    { n: 'Ratchadaphisek Rd.', th: 'ถนนรัชดาภิเษก', type: 'arterial' },
+  ],
+  '1017': [ // Huai Khwang
+    { n: 'Ratchadaphisek Rd.', th: 'ถนนรัชดาภิเษก', type: 'arterial' },
+    { n: 'Pracha Rat Bamphen Rd.', th: 'ถนนประชาราษฎร์บำเพ็ญ', type: 'collector' },
+    { n: 'Pracha Songkhro Rd.', th: 'ถนนประชาสงเคราะห์', type: 'collector' },
+  ],
+  '1014': [ // Phaya Thai
+    { n: 'Phahon Yothin Rd.', th: 'ถนนพหลโยธิน', type: 'arterial' },
+    { n: 'Rang Nam Rd.', th: 'ถนนรางน้ำ', type: 'collector' },
+    { n: 'Si Ayutthaya Rd.', th: 'ถนนศรีอยุธยา', type: 'collector' },
+  ],
+  '1006': [ // Bang Kapi
+    { n: 'Lat Phrao Rd.', th: 'ถนนลาดพร้าว', type: 'arterial' },
+    { n: 'Ramkhamhaeng Rd.', th: 'ถนนรามคำแหง', type: 'arterial' },
+    { n: 'Nawamin Rd.', th: 'ถนนนวมินทร์', type: 'arterial' },
+  ],
+  '1018': [ // Khlong San
+    { n: 'Ngamwongwan Rd.', th: 'ถนนงามวงศ์วาน', type: 'arterial' },
+    { n: 'Krung Thon Buri Rd.', th: 'ถนนกรุงธนบุรี', type: 'arterial' },
+    { n: 'Somdet Phra Chao Taksin', th: 'ถนนสมเด็จพระเจ้าตากสิน', type: 'arterial' },
+  ],
+  '1002': [ // Dusit
+    { n: 'Ratchawithi Rd.', th: 'ถนนราชวิถี', type: 'arterial' },
+    { n: 'Si Ayutthaya Rd.', th: 'ถนนศรีอยุธยา', type: 'arterial' },
+    { n: 'Samsen Rd.', th: 'ถนนสามเสน', type: 'arterial' },
+  ],
+  '1009': [ // Phra Khanong
+    { n: 'Sukhumvit Rd.', th: 'ถนนสุขุมวิท', type: 'arterial' },
+    { n: 'Soi On Nut (Sukhumvit 77)', th: 'ซอยอ่อนนุช', type: 'collector' },
+    { n: 'Pridi Banomyong Rd.', th: 'ถนนปรีดี พนมยงค์', type: 'collector' },
+  ],
+  '1011': [ // Lat Krabang
+    { n: 'Lat Krabang Rd.', th: 'ถนนลาดกระบัง', type: 'arterial' },
+    { n: 'Rattanathibet Rd.', th: 'ถนนรัตนาธิเบศร์', type: 'highway' },
+    { n: 'Chalong Krung Rd.', th: 'ถนนฉลองกรุง', type: 'arterial' },
+  ],
+};
+
+// Get district for a sub
+function getParentDistrict(dcode) {
+  return DATA.districts.find(d => d.dcode === dcode);
+}
+
+// === Pre-render all subdistricts ===
+SUBS_DATA.subs.forEach((s, i) => {
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', s.path);
+  p.setAttribute('class','subdistrict');
+  p.setAttribute('data-dcode', s.dcode);
+  p.setAttribute('data-idx', i);
+  p.setAttribute('data-scode', s.scode);
+  svgSubs.appendChild(p);
+
+  const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x', s.cx);
+  t.setAttribute('y', s.cy);
+  t.setAttribute('class','sub-label');
+  t.setAttribute('data-dcode', s.dcode);
+  // Two-line label: English then Thai
+  t.innerHTML = `<tspan x="${s.cx}" dy="-2">${s.sname_en}</tspan><tspan class="th" x="${s.cx}" dy="6">${s.sname_th}</tspan>`;
+  svgSubLabels.appendChild(t);
+});
+
+// Bind sub clicks
+document.querySelectorAll('.subdistrict').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const idx = +el.dataset.idx;
+    const s = SUBS_DATA.subs[idx];
+    document.querySelectorAll('.subdistrict.active').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
+    renderSub(s);
+  });
+});
+
+// === Drill-down ===
+function drillInto(district) {
+  if (viewLevel === 'district') return;
+  viewLevel = 'transitioning';
+  currentDistrict = district;
+
+  const t = SUBS_DATA.transforms[district.dcode];
+  if (!t) { viewLevel = 'city'; return; }
+
+  // Show flash overlay on the district being zoomed into
+  const targetEl = document.querySelector(`.district[data-id="${district.id}"]`);
+  if (targetEl) {
+    targetEl.classList.add('zoom-target');
+    setTimeout(() => targetEl.classList.remove('zoom-target'), 600);
+  }
+
+  // Add zooming class for visual cue (cursor, grid pulse)
+  const canvas = document.getElementById('canvas');
+  canvas.classList.add('zooming');
+
+  svgRoot.style.transition = 'none';
+  svgRoot.style.transform = 'scale(1)';
+  // Reset any manual zoom (the +/- buttons) so it doesn't fight the camera move
+  if (typeof zoom !== 'undefined') zoom = 1;
+  if (typeof panX !== 'undefined') { panX = 0; panY = 0; }
+
+  // PHASE 1 (0–250ms): Brief pause, flash the target
+  // PHASE 2 (250–1200ms): Cinematic zoom with easing
+  // PHASE 3 (1200ms+): Reveal subs with stagger
+
+  setTimeout(() => {
+    // Fade out other districts BEFORE zoom starts
+    document.querySelectorAll('.district').forEach(el => {
+      if (el.dataset.id !== district.id) el.classList.add('faded');
+    });
+    document.querySelectorAll('.district-label').forEach(el => el.classList.add('faded'));
+
+    // Begin the camera move
+    animateViewBox(svgRoot.getAttribute('viewBox'), `${t.x} ${t.y} ${t.w} ${t.h}`, 950);
+
+    // After zoom completes, reveal subs with staggered animation
+    setTimeout(() => {
+      const subs = document.querySelectorAll(`.subdistrict[data-dcode="${district.dcode}"]`);
+      const subLabels = document.querySelectorAll(`.sub-label[data-dcode="${district.dcode}"]`);
+
+      // Stagger: 60ms delay between each
+      subs.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 60);
+      });
+      subLabels.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 60 + 100);
+      });
+
+      // Generate roads after subs appear
+      setTimeout(() => generateRoads(t), subs.length * 60 + 200);
+
+      // Subtle camera shake on arrival
+      setTimeout(() => {
+        svgRoot.classList.add('arrive');
+        setTimeout(() => svgRoot.classList.remove('arrive'), 400);
+      }, 50);
+
+      canvas.classList.remove('zooming');
+      viewLevel = 'district';
+    }, 950);
+
+  }, 200);
+
+  // Show back button + hide search
+  backBtn.classList.add('show');
+  searchBox.classList.add('hidden');
+
+  // Render the panel immediately
+  renderDistrictWithSubs(district);
+}
+
+function drillOut() {
+  if (viewLevel === 'city' || viewLevel === 'transitioning') return;
+  viewLevel = 'transitioning';
+
+  // Hide subs and roads first
+  document.querySelectorAll('.subdistrict.visible').forEach(el => el.classList.remove('visible'));
+  document.querySelectorAll('.sub-label.visible').forEach(el => el.classList.remove('visible'));
+  document.querySelectorAll('.road-overlay.visible').forEach(el => el.classList.remove('visible'));
+
+  // Zoom out
+  setTimeout(() => {
+    animateViewBox(svgRoot.getAttribute('viewBox'), ORIG_VIEWBOX, 800);
+
+    setTimeout(() => {
+      document.querySelectorAll('.district').forEach(el => el.classList.remove('faded'));
+      document.querySelectorAll('.district-label').forEach(el => el.classList.remove('faded'));
+      document.querySelectorAll('.road-overlay').forEach(el => el.remove());
+
+      currentDistrict = null;
+      currentSub = null;
+      viewLevel = 'city';
+
+      const last = document.querySelector('.district.active');
+      if (last) render(last.dataset.id);
+    }, 800);
+  }, 200);
+
+  backBtn.classList.remove('show');
+  searchBox.classList.remove('hidden');
+}
+
+backBtn.addEventListener('click', drillOut);
+
+// Cinematic viewBox interpolation with custom easing
+// Also sets --vbScale CSS variable so labels/strokes can compensate for zoom
+const BASE_VB_W = 1000;
+function setViewBoxScale(vbW) {
+  // Scale ratio: smaller viewBox = more zoomed in = smaller fonts needed (inverse)
+  const scale = Math.max(0.25, Math.min(1.4, vbW / BASE_VB_W));
+  svgRoot.style.setProperty('--vbScale', scale.toFixed(3));
+}
+
+function animateViewBox(fromStr, toStr, duration) {
+  const from = fromStr.split(/\s+/).map(Number);
+  const to = toStr.split(/\s+/).map(Number);
+  const start = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    // Ease-out-expo for cinematic deceleration
+    const e = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    const v = from.map((f, i) => f + (to[i] - f) * e);
+    svgRoot.setAttribute('viewBox', v.map(n => n.toFixed(2)).join(' '));
+    setViewBoxScale(v[2]);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Generate stylized road lines inside a district bbox (decorative — for visual depth)
+function generateRoads(transform) {
+  // Clear existing
+  svgRoads.innerHTML = '';
+  const { x, y, w, h } = transform;
+  // 2-3 major horizontal/vertical "roads" inside the district
+  const horiz = 2 + Math.floor(Math.random() * 2);
+  const vert  = 2 + Math.floor(Math.random() * 2);
+
+  for (let i = 1; i <= horiz; i++) {
+    const yL = y + (h * i) / (horiz + 1);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    // Slight wobble
+    const segs = 6;
+    let d = '';
+    for (let j = 0; j <= segs; j++) {
+      const xL = x + (w * j) / segs;
+      const yJ = yL + (Math.random() - 0.5) * (h * 0.04);
+      d += (j === 0 ? 'M' : 'L') + xL.toFixed(1) + ',' + yJ.toFixed(1) + ' ';
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'road-overlay ' + (i === 1 ? 'major' : ''));
+    svgRoads.appendChild(path);
+    setTimeout(() => path.classList.add('visible'), 400);
+  }
+  for (let i = 1; i <= vert; i++) {
+    const xL = x + (w * i) / (vert + 1);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const segs = 6;
+    let d = '';
+    for (let j = 0; j <= segs; j++) {
+      const yJ = y + (h * j) / segs;
+      const xJ = xL + (Math.random() - 0.5) * (w * 0.04);
+      d += (j === 0 ? 'M' : 'L') + xJ.toFixed(1) + ',' + yJ.toFixed(1) + ' ';
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'road-overlay ' + (i === 1 ? 'major' : ''));
+    svgRoads.appendChild(path);
+    setTimeout(() => path.classList.add('visible'), 400);
+  }
+}
+
+// === Override the original district click to drill in instead ===
+document.querySelectorAll('.district').forEach(el => {
+  el.removeEventListener && el.removeEventListener('click', () => {}); // no-op (we added a fresh listener)
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (viewLevel === 'district') return; // already inside, ignore
+    const d = DATA.districts.find(x => x.id === el.dataset.id);
+    if (!d) return;
+    document.querySelectorAll('.district.active').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
+    drillInto(d);
+  }, true); // capture phase to run before old listener
+});
+
+// === Panel renderers ===
+function renderDistrictWithSubs(d) {
+  const empty = document.getElementById('empty');
+  const panel = document.getElementById('content');
+  empty.style.display = 'none';
+  panel.style.display = 'block';
+
+  const subs = SUBS_BY_DCODE[d.dcode] || [];
+  const roads = ROADS_BY_DCODE[d.dcode] || [];
+
+  // Build sub list
+  const subsHtml = subs.map((s, idx) => `
+    <div class="sub-list-item" data-idx="${SUBS_DATA.subs.indexOf(s)}">
+      <div>
+        <div class="sub-name">${s.sname_en.split(' ')[0]} <em>${s.sname_en.split(' ').slice(1).join(' ')}</em></div>
+        <div class="sub-thai">ตำบล${s.sname_th}</div>
+      </div>
+      <div class="sub-stats">
+        <strong>${s.area_km2.toFixed(2)}</strong> km²<br>
+        ${fmt(s.pop_est)} pop<br>
+        <span style="color:var(--ink-3)">${fmt(s.density_est)}/km²</span>
+      </div>
+      <span class="arrow">→</span>
+    </div>
+  `).join('');
+
+  const roadsHtml = roads.length ? `
+    <div class="section-title">Notable Roads · ถนนสำคัญ</div>
+    <div class="street-list">
+      ${roads.map(r => `
+        <div class="street-row">
+          <span class="icon">⟶</span>
+          <div>
+            <div class="street-name">${r.n}</div>
+            <div class="street-th">${r.th}</div>
+          </div>
+          <span class="street-type">${r.type}</span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  panel.innerHTML = `
+    <div class="panel-header">
+      <div class="crumb"><a id="crumb-home">NONTHABURI</a> <span class="sep">/</span> ${d.name_en.toUpperCase()} <span class="level-badge">DISTRICT</span></div>
+      <div class="district-name">${d.name_en.split(' ')[0]} <em>${d.name_en.split(' ').slice(1).join(' ') || ''}</em></div>
+      <div class="district-thai">อำเภอ${d.name_th}</div>
+      <div class="district-code">PRIMARY ZONE · ${d.primary_zone || 'MIXED'} · ${getZoneName(d.primary_zone)}</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="label">AREA</div>
+        <div class="value">${d.area_km2}<span class="unit">km²</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">SUBDISTRICTS</div>
+        <div class="value">${subs.length}<span class="unit">ตำบล</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Subdistricts · ตำบล</div>
+    <div class="sub-list">${subsHtml}</div>
+
+    ${roadsHtml}
+
+    ${buildPermissionsBar(d.primary_zone)}
+
+    ${buildLegalSection(d, 'district')}
+
+    <div class="actions">
+      <button class="btn" onclick="drillOut()">◂ Back to City</button>
+      <button class="btn primary">Compare Subs</button>
+    </div>
+  `;
+
+  // Bind sub-list clicks
+  panel.querySelectorAll('.sub-list-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = +el.dataset.idx;
+      const sub = SUBS_DATA.subs[idx];
+      // Highlight the polygon
+      document.querySelectorAll('.subdistrict.active').forEach(a => a.classList.remove('active'));
+      const subEl = document.querySelector(`.subdistrict[data-idx="${idx}"]`);
+      if (subEl) subEl.classList.add('active');
+      renderSub(sub);
+    });
+  });
+
+  document.getElementById('crumb-home').addEventListener('click', drillOut);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
+}
+
+function openTambonDetail(dcode, scode, snameTh, snameEn, ampTh) {
+  const bbox = DISTRICT_BBOX[dcode] || {};
+  const params = new URLSearchParams({
+    d: dcode, s: scode, th: snameTh, en: snameEn, amp: ampTh,
+    prov: 'นนทบุรี',
+    lat: bbox.clat || 13.86, lng: bbox.clng || 100.51
+  });
+  window.location.href = 'tambon.html?' + params.toString();
+}
+
+function makeCollapsible(panel) {
+  if (!panel) return;
+
+  // หัวข้อที่ให้แสดงเริ่มต้น (ไม่พับ) — ข้อมูลหลักที่ควรเห็นทันที
+  const keepOpen = ['kind of land', 'land type', 'ประเภทการใช้ที่ดิน', 'ประเภทที่ดิน'];
+
+  // ฟังก์ชันช่วย: ทำหัวข้อ + body ให้พับได้
+  function attachToggle(head, body, opened) {
+    head.classList.add('collapsible');
+    const chev = document.createElement('span');
+    chev.className = 'collapse-chevron';
+    chev.textContent = '▼';
+    head.insertBefore(chev, head.firstChild);
+    if (!opened) {
+      head.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+    head.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isCollapsed = body.classList.toggle('collapsed');
+      head.classList.toggle('collapsed', isCollapsed);
+    });
+  }
+
+  // === ขั้นที่ 1: ทำเฉพาะ section-title เป็นหัวข้อหลัก (พับ section ทั้งก้อน) ===
+  // law-subhead ที่อยู่ระหว่าง section จะถูกดูดเข้าไปใน body ของ section นั้นด้วย
+  const sections = Array.from(panel.querySelectorAll('.section-title'));
+  sections.forEach((head) => {
+    if (head.dataset.collapsibleDone) return;
+    head.dataset.collapsibleDone = '1';
+
+    const headText = head.textContent.toLowerCase();
+    const shouldKeepOpen = keepOpen.some(k => headText.includes(k));
+
+    // รวบรวมทุก element จนถึง section-title ถัดไป (รวม law-subhead ด้วย)
+    const body = document.createElement('div');
+    body.className = 'collapse-body';
+    let sib = head.nextElementSibling;
+    const toMove = [];
+    while (sib && !sib.classList.contains('section-title')) {
+      toMove.push(sib);
+      sib = sib.nextElementSibling;
+    }
+    if (toMove.length === 0) return;
+    toMove.forEach(el => body.appendChild(el));
+    head.parentNode.insertBefore(body, sib);
+
+    attachToggle(head, body, shouldKeepOpen);
+
+    // === ขั้นที่ 2: ภายใน body ถ้ามี law-subhead → ทำเป็นหัวข้อย่อยพับได้ ===
+    const subHeads = Array.from(body.querySelectorAll('.law-subhead'));
+    subHeads.forEach((sub) => {
+      if (sub.dataset.collapsibleDone) return;
+      sub.dataset.collapsibleDone = '1';
+
+      // ลบ ▸ นำหน้าเดิม
+      sub.innerHTML = sub.innerHTML.replace(/^\s*▸\s*/, '');
+
+      const subBody = document.createElement('div');
+      subBody.className = 'collapse-body';
+      let s = sub.nextElementSibling;
+      const move = [];
+      while (s && !s.classList.contains('law-subhead') && !s.classList.contains('law-footnote')) {
+        move.push(s);
+        s = s.nextElementSibling;
+      }
+      if (move.length === 0) return;
+      move.forEach(el => subBody.appendChild(el));
+      sub.parentNode.insertBefore(subBody, s);
+
+      // หัวข้อย่อยเปิดไว้ (เพราะอยู่ในกฎหมายที่พับอยู่แล้ว)
+      attachToggle(sub, subBody, true);
+    });
+  });
+}
+
+
+function renderSub(sub) {
+  currentSub = sub;
+  const district = getParentDistrict(sub.dcode);
+  if (!district) return;
+
+  const panel = document.getElementById('content');
+  document.getElementById('empty').style.display = 'none';
+  panel.style.display = 'block';
+
+  // Determine likely sub-zone (use parent district's primary zone as fallback)
+  const primaryZone = district.primary_zone;
+  const zoneName = getZoneName(primaryZone);
+
+  // Determine "kind of land" for the subdistrict — use a slight variation of parent's land mix
+  // For more realism, certain known subs override
+  const subLandKinds = getSubLandMix(sub.sname_en, district);
+
+  // Estimate communities / temples per sub by share of district's total
+  const subs = SUBS_BY_DCODE[sub.dcode] || [];
+  const areaShare = sub.area_km2 / subs.reduce((sum, s) => sum + s.area_km2, 0);
+  const subTemples = Math.round((district.no_temple || 0) * areaShare);
+  const subSch = Math.round((district.no_sch || 0) * areaShare);
+  const subCommu = Math.round((district.no_commu || 0) * areaShare);
+
+  const landRows = subLandKinds.map(l => `
+    <div class="land-item">
+      <span class="name">${l.n}<span class="code">[${l.code}]</span></span>
+      <span class="bar" style="--w:${l.v}%"></span>
+      <span class="pct">${l.v}%</span>
+    </div>
+  `).join('');
+
+  panel.innerHTML = `
+    <div class="panel-header">
+      <div class="crumb">
+        <a id="crumb-home">NONTHABURI</a> <span class="sep">/</span>
+        <a id="crumb-district">${district.name_en.toUpperCase()}</a> <span class="sep">/</span>
+        ${sub.sname_en.toUpperCase()} <span class="level-badge">TAMBON</span>
+      </div>
+      <div class="district-name">${sub.sname_en.split(' ')[0]} <em>${sub.sname_en.split(' ').slice(1).join(' ') || ''}</em></div>
+      <div class="district-thai">ตำบล${sub.sname_th}</div>
+      <div class="district-code">SCODE ${sub.scode} · UNDER ${district.name_en.toUpperCase()} ZONE ${primaryZone}</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="label">AREA</div>
+        <div class="value">${sub.area_km2.toFixed(2)}<span class="unit">km²</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">DENSITY</div>
+        <div class="value">${fmt(sub.density_est)}<span class="unit">/km²</span></div>
+      </div>
+    </div>
+
+    <button class="tambon-detail-btn" onclick="openTambonDetail('${district.dcode}','${sub.scode}','${sub.sname_th}','${sub.sname_en.replace(/'/g,"")}','${district.name_th}')">
+      <span class="tdb-icon">🗺️</span>
+      <span class="tdb-text">
+        <span class="tdb-title">ดูข้อมูลตำบลนี้</span>
+        <span class="tdb-sub">แผนที่ละเอียด · ถนน · หมู่บ้าน · สถานที่สำคัญ</span>
+      </span>
+      <span class="tdb-arrow">→</span>
+    </button>
+
+    <div class="section-title">Land Type · ประเภทที่ดิน</div>
+    <div class="land-grid">${landRows}</div>
+
+    ${buildLegalSection(district, 'sub')}
+
+    <div class="section-title">Population · ประชากร</div>
+    <div class="pop-headline">${fmt(sub.pop_est)} <em>est.</em></div>
+    <div class="pop-sub">PRO-RATA ESTIMATE · BMA CENSUS 2563</div>
+
+    <div class="demo-row">
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','temple','${district.name_en} · ${sub.sname_en}')">
+        <div class="num">${subTemples}</div><div class="lbl">Temples</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','school','${district.name_en} · ${sub.sname_en}')">
+        <div class="num">${subSch}</div><div class="lbl">Schools</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo demo-clickable" onclick="openPOIModal('${district.dcode}','community','${district.name_en} · ${sub.sname_en}')">
+        <div class="num">${subCommu}</div><div class="lbl">Communities</div>
+        <div class="demo-tap">แตะดูรายชื่อ ▸</div>
+      </div>
+      <div class="demo"><div class="num">${sub.water || 0}</div><div class="lbl">Water Bodies</div></div>
+    </div>
+
+    ${buildPermissionsBar(district.primary_zone)}
+
+    <div class="actions">
+      <button class="btn" id="back-to-dist">◂ Back to ${district.name_en}</button>
+      <button class="btn primary" onclick="drillOut()">นนทบุรี ⇲</button>
+    </div>
+  `;
+
+  document.getElementById('crumb-home').addEventListener('click', drillOut);
+  document.getElementById('crumb-district').addEventListener('click', () => {
+    document.querySelectorAll('.subdistrict.active').forEach(a => a.classList.remove('active'));
+    renderDistrictWithSubs(district);
+  });
+  document.getElementById('back-to-dist').addEventListener('click', () => {
+    document.querySelectorAll('.subdistrict.active').forEach(a => a.classList.remove('active'));
+    renderDistrictWithSubs(district);
+  });
+
+  // Animate bars
+  setTimeout(() => {
+    panel.querySelectorAll('.land-item .bar').forEach(b => {
+      const w = b.style.getPropertyValue('--w');
+      b.style.setProperty('--w', '0%');
+      requestAnimationFrame(() => requestAnimationFrame(() =>
+        b.style.setProperty('--w', w)));
+    });
+  }, 30);
+  if (typeof makeCollapsible === 'function') makeCollapsible(panel);
+}
+
+// Deterministic but slightly varied land mix per subdistrict
+function getSubLandMix(subName, district) {
+  // Hash sub name for stable variation
+  let h = 0;
+  for (let i = 0; i < subName.length; i++) h = ((h << 5) - h + subName.charCodeAt(i)) | 0;
+  const variance = Math.abs(h % 7) - 3; // -3 to +3
+
+  return (district.land || []).map((l, i) => {
+    // Slight variation: first land type up, others compensate
+    const v = i === 0 ? Math.max(20, Math.min(70, l.v + variance)) : l.v;
+    return { ...l, v };
+  });
+}
+
+
+
+// ============================================
+// ระบบดึงรายชื่อสถานที่จริงจาก OpenStreetMap (Overpass API)
+// ============================================
+const DISTRICT_BBOX = {"1204":{"s":13.86254,"w":100.33085,"n":13.9997,"e":100.45088,"clat":13.93089,"clng":100.39439},"1205":{"s":13.86965,"w":100.26225,"n":14.13998,"e":100.35659,"clat":14.00755,"clng":100.30913},"1202":{"s":13.78879,"w":100.31908,"n":13.83703,"e":100.51514,"clat":13.81316,"clng":100.42114},"1203":{"s":13.8154,"w":100.29651,"n":13.91086,"e":100.44791,"clat":13.85615,"clng":100.36918},"1201":{"s":13.80959,"w":100.42742,"n":13.8949,"e":100.54957,"clat":13.85689,"clng":100.49115},"1206":{"s":13.87815,"w":100.41128,"n":13.98658,"e":100.5678,"clat":13.92443,"clng":100.49689}};
+
+// Cache ผลลัพธ์ไม่ให้ยิงซ้ำ
+const POI_CACHE = {};
+
+// Overpass API endpoints (มี fallback หลายตัว)
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
+
+// นิยาม query แต่ละประเภท (OSM tags)
+const POI_QUERIES = {
+  temple: {
+    label_en: 'Temples',
+    label_th: 'วัด / ศาสนสถาน',
+    icon: 'M12 3l6 5v3h-2v10H8V11H6V8l6-5M10 21V14h4v7',
+    // วัดพุทธ + ศาสนสถานอื่น
+    filter: '["amenity"="place_of_worship"]'
+  },
+  school: {
+    label_en: 'Schools',
+    label_th: 'โรงเรียน / สถานศึกษา',
+    icon: 'M2 10l10-5 10 5l-10 5L2 10M6 12v5c0 2 3 3 6 3s6-1 6-3v-5',
+    filter: '["amenity"~"school|college|university|kindergarten"]'
+  },
+  hospital: {
+    label_en: 'Health',
+    label_th: 'โรงพยาบาล / สถานพยาบาล',
+    icon: 'M4 21V5h16v16M12 9v8M8 13h8',
+    filter: '["amenity"~"hospital|clinic|doctors"]'
+  },
+  community: {
+    label_en: 'Communities',
+    label_th: 'ชุมชน / สถานที่ชุมชน',
+    icon: 'M3 21h18M5 21V10l7-5l7 5v11M9 13v5M12 13v5M15 13v5',
+    filter: '["place"~"neighbourhood|suburb|quarter"]'
+  }
+};
+
+// สร้าง Overpass QL query จาก bbox
+function buildOverpassQuery(bbox, filter) {
+  const bb = `${bbox.s},${bbox.w},${bbox.n},${bbox.e}`;
+  return `[out:json][timeout:25];(node${filter}(${bb});way${filter}(${bb}););out tags center 60;`;
+}
+
+// ดึง POI จาก Overpass (ลอง endpoint หลายตัว)
+async function fetchPOI(dcode, type) {
+  const cacheKey = `${dcode}-${type}`;
+  if (POI_CACHE[cacheKey]) return POI_CACHE[cacheKey];
+
+  const bbox = DISTRICT_BBOX[dcode];
+  if (!bbox) throw new Error('ไม่พบขอบเขตเขต');
+
+  const query = buildOverpassQuery(bbox, POI_QUERIES[type].filter);
+
+  let lastErr;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(query),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      // แปลงผลลัพธ์เป็นรายชื่อ
+      const items = (data.elements || [])
+        .map(el => {
+          const t = el.tags || {};
+          const name_th = t['name:th'] || t.name || '';
+          const name_en = t['name:en'] || '';
+          const display = name_th || name_en;
+          if (!display) return null;
+          return {
+            th: name_th,
+            en: name_en,
+            type: t.religion || t.amenity || t.place || '',
+            lat: el.lat || (el.center && el.center.lat),
+            lng: el.lon || (el.center && el.center.lon)
+          };
+        })
+        .filter(Boolean)
+        // ลบชื่อซ้ำ
+        .filter((v, i, arr) => arr.findIndex(x => x.th === v.th && x.en === v.en) === i)
+        .sort((a, b) => (a.th || a.en).localeCompare(b.th || b.en, 'th'));
+
+      POI_CACHE[cacheKey] = items;
+      return items;
+    } catch (e) {
+      lastErr = e;
+      continue; // ลอง endpoint ถัดไป
+    }
+  }
+  throw lastErr || new Error('ดึงข้อมูลไม่สำเร็จ');
+}
+
+// เปิด modal แสดงรายชื่อ
+async function openPOIModal(dcode, type, districtName) {
+  const cfg = POI_QUERIES[type];
+  const modal = document.getElementById('poi-modal');
+  const modalBody = document.getElementById('poi-modal-body');
+  const modalTitle = document.getElementById('poi-modal-title');
+  const modalSub = document.getElementById('poi-modal-sub');
+
+  modalTitle.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${cfg.icon}"/></svg> ${cfg.label_th}`;
+  modalSub.textContent = `${districtName} · ข้อมูลสดจาก OpenStreetMap`;
+  modal.classList.add('show');
+
+  // Loading state
+  modalBody.innerHTML = `
+    <div class="poi-loading">
+      <div class="poi-spinner"></div>
+      <div>กำลังโหลดรายชื่อจาก OpenStreetMap...</div>
+    </div>`;
+
+  try {
+    const items = await fetchPOI(dcode, type);
+    if (items.length === 0) {
+      modalBody.innerHTML = `<div class="poi-empty">ไม่พบข้อมูลที่บันทึกไว้ใน OpenStreetMap สำหรับพื้นที่นี้<br><span>(ข้อมูล OSM อาจยังไม่ครบถ้วน)</span></div>`;
+      return;
+    }
+    modalBody.innerHTML = `
+      <div class="poi-count">พบ ${items.length} แห่ง</div>
+      <div class="poi-list">
+        ${items.map((it, i) => `
+          <div class="poi-item">
+            <span class="poi-num">${i + 1}</span>
+            <div class="poi-info">
+              <div class="poi-name-th">${it.th || it.en}</div>
+              ${it.en && it.th ? `<div class="poi-name-en">${it.en}</div>` : ''}
+            </div>
+            ${it.lat ? `<a class="poi-map-link" href="https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lng}" target="_blank" rel="noopener" title="ดูบนแผนที่">📍</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="poi-source">ข้อมูลจาก OpenStreetMap contributors · อาจไม่ครบถ้วน 100%</div>
+    `;
+  } catch (e) {
+    modalBody.innerHTML = `
+      <div class="poi-error">
+        <div class="poi-error-icon">⚠</div>
+        โหลดข้อมูลไม่สำเร็จ<br>
+        <span>${e.message || 'การเชื่อมต่อมีปัญหา'} — กรุณาลองใหม่อีกครั้ง</span>
+        <button class="poi-retry" onclick="openPOIModal('${dcode}','${type}','${districtName.replace(/'/g, "")}')">ลองอีกครั้ง</button>
+      </div>`;
+  }
+}
+
+function closePOIModal() {
+  document.getElementById('poi-modal').classList.remove('show');
+}
+
+
+// Default selection
+setTimeout(() => {
+  const firstId = DATA.districts[0] && DATA.districts[0].id;
+  const d = firstId && document.querySelector('[data-id="'+firstId+'"]');
+  if (d) { d.classList.add('active'); render(firstId); }
+}, 400);
+
+// === Theme Toggle — sync ผ่าน localStorage (default day) ===
+(function(){
+  const btn=document.getElementById('themeToggle');
+  const icon=btn&&btn.querySelector('.theme-icon');
+  function apply(dark){
+    document.body.classList.toggle('dark',dark);
+    if(icon) icon.textContent=dark?'\u2600':'\u263e';
+    if(btn) btn.title=dark?'สลับเป็นโหมดกลางวัน':'สลับเป็นโหมดกลางคืน';
+    const cur=document.querySelector('input[name="mode"]:checked');
+    if(cur&&typeof applyMode==='function') applyMode(cur.value);
+  }
+  let dark=false;
+  try{dark=localStorage.getItem('thaigeolab-theme')==='dark';}catch(e){}
+  apply(dark);
+  if(btn) btn.addEventListener('click',()=>{
+    const next=!document.body.classList.contains('dark');
+    apply(next);
+    try{localStorage.setItem('thaigeolab-theme',next?'dark':'light');}catch(e){}
+  });
+})();
+
+</script>
+
+
+<!-- POI Modal -->
+<div class="poi-modal" id="poi-modal" onclick="if(event.target===this)closePOIModal()">
+  <div class="poi-modal-card">
+    <div class="poi-modal-header">
+      <div>
+        <div class="poi-modal-title" id="poi-modal-title"></div>
+        <div class="poi-modal-sub" id="poi-modal-sub"></div>
+      </div>
+      <button class="poi-modal-close" onclick="closePOIModal()">✕</button>
+    </div>
+    <div class="poi-modal-body" id="poi-modal-body"></div>
+  </div>
+</div>
+
+</body>
+</html>
