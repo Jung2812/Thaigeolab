@@ -161,6 +161,10 @@ const snameTh = P.get('th') || '', snameEn = P.get('en') || '';
 const distTh = P.get('dist') || '';
 const lat = parseFloat(P.get('lat')) || 13.75;
 const lng = parseFloat(P.get('lng')) || 100.5;
+// ข้อมูลขอบเขตแขวงจริง (SVG path จาก bangkok atlas) — แม่นยำกว่า OSM
+const khwaengPath = P.get('path') || '';
+const svgBB = (P.get('svgbb') || '').split(',').map(Number);   // [xmin,ymin,xmax,ymax]
+const geoBB = (P.get('geo') || '').split(',').map(Number);     // [s,w,n,e]
 
 document.getElementById('crumb').textContent = `BANGKOK / ${distTh.toUpperCase()}`;
 document.getElementById('title').innerHTML = `แขวง${snameTh}`;
@@ -304,51 +308,89 @@ function drawMarkers(cat, items) {
 
 // === โหลดขอบเขต (polygon) มาวาดทับแผนที่ ===
 let boundaryLayer = null;
+
+// วาดเส้นส้ม + spotlight + ป้ายชื่อ จาก rings ([[lat,lng],...])
+function drawBoundary(rings) {
+  // Spotlight: พื้นที่นอกแขวงมืดลง
+  const worldRing = [[-90,-360],[-90,360],[90,360],[90,-360]];
+  L.polygon([worldRing, ...rings], {
+    color: 'transparent', weight: 0,
+    fillColor: '#1a1206', fillOpacity: 0.28,
+    fillRule: 'evenodd', interactive: false
+  }).addTo(map);
+  // เส้นเรือง (glow)
+  L.polygon(rings, {
+    color: '#ff7a1a', weight: 8, opacity: 0.18,
+    fill: false, lineJoin: 'round', interactive: false
+  }).addTo(map);
+  // กรอบส้ม
+  boundaryLayer = L.polygon(rings, {
+    color: '#ff7a1a', weight: 3.5, opacity: 0.95,
+    fillColor: '#ff7a1a', fillOpacity: 0.04,
+    lineJoin: 'round', interactive: false
+  }).addTo(map);
+  map.fitBounds(boundaryLayer.getBounds(), { padding: [40,40], maxZoom: 16 });
+  const center = boundaryLayer.getBounds().getCenter();
+  L.marker(center, {
+    interactive: false,
+    icon: L.divIcon({
+      className: 'khwaeng-label',
+      html: `<div style="white-space:nowrap;font-weight:700;font-size:14px;color:#d2630a;text-shadow:0 1px 3px rgba(255,255,255,0.95),0 0 10px rgba(255,255,255,0.85);pointer-events:none">แขวง${snameTh}</div>`,
+      iconSize: [0,0], iconAnchor: [0,0]
+    })
+  }).addTo(map);
+}
+
+// แปลง SVG path → rings [lat,lng] ด้วย linear interpolation (svgBB ↔ geoBB)
+function svgPathToRings(pathStr) {
+  if (!pathStr || svgBB.length !== 4 || geoBB.length !== 4) return null;
+  const [xmin, ymin, xmax, ymax] = svgBB;
+  const [gs, gw, gn, ge] = geoBB; // south, west, north, east
+  const dx = xmax - xmin, dy = ymax - ymin;
+  if (dx === 0 || dy === 0) return null;
+  // แยกแต่ละ subpath (คั่นด้วย Z)
+  const subpaths = pathStr.split('Z').filter(s => s.trim());
+  const rings = [];
+  for (const sp of subpaths) {
+    const coords = sp.match(/-?\d+\.?\d*/g);
+    if (!coords || coords.length < 6) continue;
+    const ring = [];
+    for (let i = 0; i + 1 < coords.length; i += 2) {
+      const sx = parseFloat(coords[i]), sy = parseFloat(coords[i+1]);
+      // x: ตะวันตก→ตะวันออก (lng เพิ่ม), y: SVG บนลงล่าง = lat ลดลง (กลับด้าน)
+      const lngP = gw + (sx - xmin) / dx * (ge - gw);
+      const latP = gn - (sy - ymin) / dy * (gn - gs);
+      ring.push([latP, lngP]);
+    }
+    if (ring.length >= 3) rings.push(ring);
+  }
+  return rings.length ? rings : null;
+}
+
 async function loadBoundary() {
-  const q = `[out:json][timeout:18];relation["boundary"="administrative"]["admin_level"="9"]["name"="ตำบล${snameTh}"];out geom;`;
-  for (const ep of OVERPASS) {
-    try {
-      const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const rel = (data.elements||[]).find(e => e.type === 'relation' && e.members);
-      if (!rel) continue;
-      const outerWays = rel.members.filter(m => m.type === 'way' && m.role === 'outer' && m.geometry);
-      if (outerWays.length === 0) continue;
-      const rings = outerWays.map(w => w.geometry.map(g => [g.lat, g.lon]));
-
-      // === Spotlight: พื้นที่นอกแขวงมืดลง เน้นพื้นที่ที่กำลังเลือก ===
-      const worldRing = [[-90,-360],[-90,360],[90,360],[90,-360]];
-      L.polygon([worldRing, ...rings], {
-        color: 'transparent', weight: 0,
-        fillColor: '#1a1206', fillOpacity: 0.28,
-        fillRule: 'evenodd', interactive: false
-      }).addTo(map);
-
-      // === กรอบส้มของแขวงที่กำลังโฟกัส ===
-      boundaryLayer = L.polygon(rings, {
-        color: '#ff7a1a', weight: 3.5, opacity: 0.95,
-        fillColor: '#ff7a1a', fillOpacity: 0.04,
-        lineJoin: 'round', interactive: false
-      }).addTo(map);
-      // เส้นเรืองรอบ (glow) ชั้นล่าง ให้กรอบเด่นบนแผนที่เทา
-      L.polygon(rings, {
-        color: '#ff7a1a', weight: 8, opacity: 0.18,
-        fill: false, lineJoin: 'round', interactive: false
-      }).addTo(map);
-
-      map.fitBounds(boundaryLayer.getBounds(), { padding: [40,40], maxZoom: 16 });
-      const center = boundaryLayer.getBounds().getCenter();
-      L.marker(center, {
-        interactive: false,
-        icon: L.divIcon({
-          className: 'khwaeng-label',
-          html: `<div style="white-space:nowrap;font-weight:700;font-size:14px;color:#d2630a;text-shadow:0 1px 3px rgba(255,255,255,0.95),0 0 10px rgba(255,255,255,0.85);pointer-events:none">แขวง${snameTh}</div>`,
-          iconSize: [0,0], iconAnchor: [0,0]
-        })
-      }).addTo(map);
-      return true;
-    } catch(e) { continue; }
+  // วิธีที่ 1: ใช้ SVG path จาก bangkok atlas (แม่นยำ 100% ไม่ต้องพึ่ง OSM)
+  const ringsFromSVG = svgPathToRings(khwaengPath);
+  if (ringsFromSVG) {
+    drawBoundary(ringsFromSVG);
+    return true;
+  }
+  // วิธีที่ 2 (fallback): ลองดึงจาก OSM ทั้ง 2 รูปแบบชื่อ (มี/ไม่มี "แขวง")
+  for (const nm of [`แขวง${snameTh}`, snameTh]) {
+    const q = `[out:json][timeout:18];relation["boundary"="administrative"]["name"="${nm}"];out geom;`;
+    for (const ep of OVERPASS) {
+      try {
+        const res = await fetch(ep, { method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'} });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const rel = (data.elements||[]).find(e => e.type === 'relation' && e.members);
+        if (!rel) continue;
+        const outerWays = rel.members.filter(m => m.type === 'way' && m.role === 'outer' && m.geometry);
+        if (outerWays.length === 0) continue;
+        const rings = outerWays.map(w => w.geometry.map(g => [g.lat, g.lon]));
+        drawBoundary(rings);
+        return true;
+      } catch(e) { continue; }
+    }
   }
   return false;
 }

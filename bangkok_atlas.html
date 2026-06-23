@@ -4095,6 +4095,8 @@ function makeCollapsible(panel) {
 // === เปิดหน้าข้อมูลแขวงรายละเอียด ===
 function openKhwaengDetail(dcode, scode, snameTh, snameEn, distTh) {
   const bbox = DISTRICT_BBOX[dcode] || {};
+  // หา SVG path ของแขวงนี้ + กรอบ SVG ของเขต เพื่อให้ khwaeng วาดเส้นเขตได้แม่นยำ
+  const sub = (SUBS_BY_DCODE[dcode] || []).find(s => s.scode === scode);
   const params = new URLSearchParams({
     d: dcode, s: scode,
     th: snameTh, en: snameEn,
@@ -4102,6 +4104,21 @@ function openKhwaengDetail(dcode, scode, snameTh, snameEn, distTh) {
     lat: bbox.clat || 13.75,
     lng: bbox.clng || 100.5
   });
+  // ส่งข้อมูลขอบเขตจริง (SVG path + กรอบแปลงพิกัด) ไปให้ khwaeng.html วาดเส้นส้ม
+  const distData = DATA.districts.find(dd => dd.dcode === dcode);
+  if (sub && sub.path && bbox.s != null && distData && distData.path) {
+    // หา SVG bounding box ของ "เขต" เพื่อจับคู่กับ lat/lng bbox ของเขตเดียวกัน
+    const nums = distData.path.match(/-?\d+\.?\d*/g).map(Number);
+    let xmin=Infinity, ymin=Infinity, xmax=-Infinity, ymax=-Infinity;
+    for (let i=0; i<nums.length; i+=2) {
+      const x=nums[i], y=nums[i+1];
+      if (x<xmin)xmin=x; if (x>xmax)xmax=x;
+      if (y<ymin)ymin=y; if (y>ymax)ymax=y;
+    }
+    params.set('path', sub.path);
+    params.set('svgbb', `${xmin},${ymin},${xmax},${ymax}`);
+    params.set('geo', `${bbox.s},${bbox.w},${bbox.n},${bbox.e}`);
+  }
   window.location.href = 'khwaeng.html?' + params.toString();
 }
 
